@@ -27,7 +27,7 @@ groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 # Create the menu buttons
 page = st.sidebar.radio(
     "Navigation",
-    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe"]
+    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools"]
 )
 
 st.sidebar.markdown("---")
@@ -102,7 +102,12 @@ elif page == "⚔️ Encounter Architect":
         if monster_df is not None:
             min_cr, max_cr = st.slider("Select Challenge Rating (CR) Range", 0, 30, (1, 5))
             filtered_df = monster_df[(monster_df['CR'] >= min_cr) & (monster_df['CR'] <= max_cr)]
+            
             st.write(f"Found **{len(filtered_df)}** monsters in that CR range.")
+            
+            st.markdown("##### 📊 CR vs. Hit Points Analysis")
+            st.scatter_chart(filtered_df, x='CR', y='HP', color='#ff4b4b')
+            
             st.dataframe(filtered_df[['Name', 'Sourcebook', 'CR', 'HP', 'AC', 'DPR']], use_container_width=True)
         else:
             st.error("⚠️ `monsters.csv` not found! Please make sure it is saved in the same folder as `app.py`.")
@@ -131,7 +136,6 @@ elif page == "📜 Session Scribe":
     st.subheader("Turn chaotic session notes into epic campaign journals.")
     st.write("Paste your raw bullet points below, and the AI will rewrite them into a narrative summary.")
     
-    # Input area with a helpful placeholder
     raw_notes = st.text_area(
         "Paste your session notes here:", 
         height=200, 
@@ -149,25 +153,119 @@ elif page == "📜 Session Scribe":
                     from groq import Groq
                     client = Groq(api_key=groq_api_key)
                     
-                    # The System Prompt for the AI
                     prompt = f"""
                     ACT AS A MASTER STORYTELLER AND FANTASY AUTHOR.
-                    
                     Take these chaotic, raw session notes from a Dungeons & Dragons game and turn them into a cohesive, dramatic, 3-paragraph "Story So Far" journal entry.
-                    Make it sound epic and engaging, ready to be read aloud to the players at the start of the next session.
-                    
                     Raw Notes:
                     {raw_notes}
                     """
                     
-                    # Call Llama 3.1
                     chat_completion = client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
                         model="llama-3.1-8b-instant", 
                     )
                     
+                    generated_story = chat_completion.choices[0].message.content
                     st.success("📜 **Epic Summary Generated:**")
-                    st.write(chat_completion.choices[0].message.content)
+                    st.write(generated_story)
+                    
+                    st.download_button(
+                        label="💾 Download Journal Entry",
+                        data=generated_story,
+                        file_name="Campaign_Journal.txt",
+                        mime="text/plain"
+                    )
                     
                 except Exception as e:
                     st.error(f"Error connecting to Groq: {e}")
+
+# --- PILLAR 4: QUICK IMPROV TOOLS ---
+elif page == "🎭 Quick Improv Tools":
+    st.title("🎭 Quick Improv Tools")
+    st.write("For when your players completely ignore your prepared notes.")
+    
+    # Tool 1: NPC Generator
+    with st.expander("🧙‍♂️ The 'Oh Crap' NPC Generator", expanded=False):
+        st.write("Instantly generate a memorable NPC.")
+        npc_prompt = st.text_input("Who did the party just talk to?", "A suspicious tavern keeper with a limp")
+        
+        if st.button("Generate NPC"):
+            if not groq_api_key:
+                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
+            else:
+                with st.spinner("Summoning NPC..."):
+                    try:
+                        from groq import Groq
+                        client = Groq(api_key=groq_api_key)
+                        prompt = f"""
+                        Create a D&D NPC based on this description: "{npc_prompt}".
+                        Provide EXACTLY 3 bullet points:
+                        1. **Name:** (A fantasy name)
+                        2. **Quirk/Appearance:** (One distinct visual or behavioral trait)
+                        3. **Secret:** (Something they are hiding from the players)
+                        """
+                        chat_completion = client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt}],
+                            model="llama-3.1-8b-instant", 
+                        )
+                        generated_npc = chat_completion.choices[0].message.content
+                        st.success("✨ **NPC Generated:**")
+                        st.write(generated_npc)
+                        
+                        st.download_button(
+                            label="💾 Download NPC Card",
+                            data=generated_npc,
+                            file_name="NPC_Card.txt",
+                            mime="text/plain"
+                        )
+                    except Exception as e:
+                        st.error(f"Error connecting to Groq: {e}")
+
+    # Tool 2: The Loot Anxiety Curer
+    with st.expander("💰 The 'Loot Anxiety' Curer", expanded=True):
+        st.write("Generate highly flavorful, balanced magic items that won't break your campaign's math.")
+        
+        col_lvl, col_theme = st.columns(2)
+        with col_lvl:
+            party_level = st.slider("Average Party Level", 1, 20, 3)
+        with col_theme:
+            loot_location = st.text_input("Location or Enemy Found On", "A dusty goblin treasury")
+            
+        if st.button("Forge Balanced Loot"):
+            if not groq_api_key:
+                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
+            else:
+                with st.spinner("Forging item..."):
+                    try:
+                        from groq import Groq
+                        client = Groq(api_key=groq_api_key)
+                        
+                        prompt = f"""
+                        Act as an expert D&D 5e game designer. 
+                        The DM wants to give a reward to a Level {party_level} party found in this location: "{loot_location}".
+                        The DM suffers from "Loot Anxiety" and is terrified of giving out game-breaking items. 
+                        
+                        Create ONE unique, flavorful magic item that is highly interesting but mechanically safe (e.g., utility-focused, highly situational, or has a fun non-combat mechanic). DO NOT just give a boring +1 to stats or damage.
+                        
+                        Provide EXACTLY 3 bullet points:
+                        - **Item Name:**
+                        - **Appearance:**
+                        - **Balanced Mechanic:**
+                        """
+                        
+                        chat_completion = client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt}],
+                            model="llama-3.1-8b-instant", 
+                        )
+                        generated_loot = chat_completion.choices[0].message.content
+                        st.success("💎 **Balanced Loot Generated:**")
+                        st.write(generated_loot)
+                        
+                        st.download_button(
+                            label="💾 Download Loot Card",
+                            data=generated_loot,
+                            file_name="Loot_Card.txt",
+                            mime="text/plain"
+                        )
+                    except Exception as e:
+                        st.error(f"Error connecting to Groq: {e}")
