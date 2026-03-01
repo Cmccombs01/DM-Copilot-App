@@ -19,7 +19,7 @@ monster_df = load_monster_data()
 st.sidebar.title("🐉 DM Co-Pilot")
 st.sidebar.markdown("Your all-in-one Campaign Management Platform.")
 
-# TIP JAR (MONETIZATION)
+# TIP JAR
 st.sidebar.markdown("---")
 st.sidebar.subheader("☕ Support the Creator")
 st.sidebar.write("If this tool saved your campaign, consider throwing a gold piece my way!")
@@ -29,7 +29,6 @@ st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebm
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Settings")
 
-# THE NEW API WALKTHROUGH
 with st.sidebar.expander("❓ How to get a free API Key"):
     st.write("1. Go to [GroqCloud Console](https://console.groq.com/keys).")
     st.write("2. Log in or create a completely free account.")
@@ -39,10 +38,10 @@ with st.sidebar.expander("❓ How to get a free API Key"):
 
 groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 
-# Create the menu buttons (UPDATED WITH WORLDBUILDER'S FORGE)
+# Create the menu buttons (NOW WITH 6 PILLARS)
 page = st.sidebar.radio(
     "Navigation",
-    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools", "🌍 Worldbuilder's Forge"]
+    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools", "🌍 Worldbuilder's Forge", "🎲 Skill Challenge Architect"]
 )
 
 st.sidebar.markdown("---")
@@ -52,7 +51,6 @@ st.sidebar.caption("Powered by Python, Pandas, SQL & Meta Llama 3.1 (Groq)")
 if page == "🤝 Campaign Matchmaker":
     st.title("🤝 Campaign Matchmaker")
     st.write("Filter players by timezone and playstyle, and let Llama 3.1 analyze bios for table compatibility.")
-    
     st.markdown("---")
     
     col1, col2 = st.columns(2)
@@ -69,47 +67,31 @@ if page == "🤝 Campaign Matchmaker":
         player_bio = st.text_area("Player Bio", "I love deep character interactions and solving mysteries. Not a huge fan of dungeon crawls.")
 
     st.markdown("---")
-    
     if st.button("Run Matchmaker Engine", type="primary"):
-        st.write("### Match Results:")
         style_difference = abs(dm_style - player_style)
-        
         if dm_timezone != player_timezone:
             st.error("❌ Match Failed: Timezone Mismatch. Players dropped from queue.")
         elif style_difference > 20:
             st.warning(f"⚠️ Match Failed: Playstyle difference is {style_difference} points. Your logic requires a difference of 20 or less.")
         else:
-            st.success(f"✅ Match Passed! Timezones align and playstyles are within range. Sending to Llama 3.1...")
-            
+            st.success("✅ Match Passed! Sending to Llama 3.1...")
             if not groq_api_key:
                 st.info("💡 Enter your Groq API key in the sidebar to unlock Llama 3.1's AI analysis!")
             else:
-                with st.spinner("Llama 3.1 is analyzing text compatibility..."):
+                with st.spinner("Analyzing compatibility..."):
                     try:
                         from groq import Groq
                         client = Groq(api_key=groq_api_key)
-                        prompt = f"""
-                        ACT AS A PROFESSIONAL NARRATIVE DESIGNER AND MATCHMAKER.
-                        - DM Playstyle Score: {dm_style}/100
-                        - DM Campaign Pitch: "{dm_pitch}"
-                        - Player Playstyle Score: {player_style}/100
-                        - Player Bio: "{player_bio}"
-                        TASK: Give this match a Compatibility Score out of 100%. Then, write a short, exciting 2-sentence campaign intro that blends the DM's pitch with what the Player wants.
-                        """
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant", 
-                        )
-                        st.success("🎯 **AI Matchmaker Output:**")
+                        prompt = f"ACT AS A MATCHMAKER. DM Pitch: '{dm_pitch}'. Player Bio: '{player_bio}'. Give a compatibility score and a 2-sentence campaign intro blending both."
+                        chat_completion = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant")
                         st.write(chat_completion.choices[0].message.content)
                     except Exception as e:
                         st.error(f"Error connecting to Groq: {e}")
 
-# --- PILLAR 2: ENCOUNTER ARCHITECT (NOW WITH LIVE COMBAT TRACKER) ---
+# --- PILLAR 2: ENCOUNTER ARCHITECT ---
 elif page == "⚔️ Encounter Architect":
     st.title("⚔️ Encounter Architect")
     st.write("Math-free combat balancing and active encounter tracking.")
-    
     tab1, tab2 = st.tabs(["🐉 Official 5.5e Monsters", "🛠️ Homebrew CR Calculator"])
     
     with tab1:
@@ -117,233 +99,135 @@ elif page == "⚔️ Encounter Architect":
         if monster_df is not None:
             min_cr, max_cr = st.slider("Select Challenge Rating (CR) Range", 0, 30, (1, 5))
             filtered_df = monster_df[(monster_df['CR'] >= min_cr) & (monster_df['CR'] <= max_cr)]
-            
-            st.write(f"Found **{len(filtered_df)}** monsters in that CR range.")
-            
-            # --- THE NEW ACTIVE COMBAT TRACKER LOGIC ---
-            # Create a copy of the dataframe specifically for combat
             combat_df = filtered_df[['Name', 'Sourcebook', 'CR', 'HP', 'AC', 'DPR']].copy()
-            # Insert a Current HP column right next to Max HP
             combat_df.insert(3, 'Current HP', combat_df['HP'])
-            
-            st.caption("Double-click any cell in the 'Current HP' column below to actively track damage during your session!")
-            # Use data_editor instead of dataframe so the user can type in it!
+            st.caption("Double-click any cell in the 'Current HP' column to actively track damage!")
             st.data_editor(combat_df, width="stretch", hide_index=True)
-            
-            st.markdown("##### 📊 CR vs. Hit Points Analysis")
             st.scatter_chart(filtered_df, x='CR', y='HP', color='#ff4b4b')
         else:
-            st.error("⚠️ `monsters.csv` not found! Please make sure it is saved in the same folder as `app.py`.")
+            st.error("⚠️ `monsters.csv` not found!")
 
     with tab2:
         st.subheader("Homebrew Monster CR Estimator")
-        st.write("Input your custom monster's stats to calculate its approximate Challenge Rating.")
-        
         col_hp, col_ac, col_dmg = st.columns(3)
-        with col_hp:
-            homebrew_hp = st.number_input("Hit Points (HP)", min_value=1, value=50)
-        with col_ac:
-            homebrew_ac = st.number_input("Armor Class (AC)", min_value=1, value=13)
-        with col_dmg:
-            homebrew_dpr = st.number_input("Damage Per Round (DPR)", min_value=1, value=10)
-            
+        with col_hp: homebrew_hp = st.number_input("Hit Points (HP)", min_value=1, value=50)
+        with col_ac: homebrew_ac = st.number_input("Armor Class (AC)", min_value=1, value=13)
+        with col_dmg: homebrew_dpr = st.number_input("Damage Per Round (DPR)", min_value=1, value=10)
         if st.button("Calculate Estimated CR"):
-            def_cr = (homebrew_hp / 15) + ((homebrew_ac - 13) / 2)
-            off_cr = (homebrew_dpr / 5)
-            final_cr = max(0, round((def_cr + off_cr) / 2))
+            final_cr = max(0, round(((homebrew_hp / 15) + ((homebrew_ac - 13) / 2) + (homebrew_dpr / 5)) / 2))
             st.success(f"⚔️ **Estimated Challenge Rating: CR {final_cr}**")
 
 # --- PILLAR 3: SESSION SCRIBE ---
 elif page == "📜 Session Scribe":
     st.title("📜 Session Scribe")
-    st.subheader("Turn chaotic session notes into epic campaign journals.")
-    st.write("Paste your raw bullet points below, and the AI will rewrite them into a narrative summary.")
-    
-    raw_notes = st.text_area(
-        "Paste your session notes here:", 
-        height=200, 
-        placeholder="- The party fought 3 goblins\n- Grog almost died but rolled a natural 20\n- Found a map to the Sunken Keep\n- Bribed the innkeeper with 5 gold"
-    )
-    
+    st.write("Paste raw bullet points below, and the AI will rewrite them into a narrative summary.")
+    raw_notes = st.text_area("Session Notes", height=200)
     if st.button("Generate Epic Summary", type="primary"):
-        if not raw_notes:
-            st.warning("⚠️ Please enter some session notes first!")
-        elif not groq_api_key:
-            st.info("💡 Enter your Groq API key in the sidebar to unlock Llama 3.1's summarization magic!")
-        else:
-            with st.spinner("Llama 3.1 is weaving your notes into a story..."):
+        if raw_notes and groq_api_key:
+            with st.spinner("Weaving notes into a story..."):
                 try:
                     from groq import Groq
                     client = Groq(api_key=groq_api_key)
-                    
-                    prompt = f"""
-                    ACT AS A MASTER STORYTELLER AND FANTASY AUTHOR.
-                    Take these chaotic, raw session notes from a Dungeons & Dragons game and turn them into a cohesive, dramatic, 3-paragraph "Story So Far" journal entry.
-                    Raw Notes:
-                    {raw_notes}
-                    """
-                    
-                    chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
-                        model="llama-3.1-8b-instant", 
-                    )
-                    
-                    generated_story = chat_completion.choices[0].message.content
-                    st.success("📜 **Epic Summary Generated:**")
-                    st.write(generated_story)
-                    
-                    st.download_button(
-                        label="📥 Download for Notion/Obsidian (.md)",
-                        data=generated_story,
-                        file_name="session_summary.md",
-                        mime="text/markdown",
-                        width="stretch"
-                    )
-                    
-                except Exception as e:
-                    st.error(f"Error connecting to Groq: {e}")
+                    prompt = f"Turn these D&D session notes into a dramatic 3-paragraph journal entry: {raw_notes}"
+                    chat_completion = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant")
+                    story = chat_completion.choices[0].message.content
+                    st.write(story)
+                    st.download_button("📥 Download for Notion/Obsidian (.md)", story, "session_summary.md", "text/markdown")
+                except Exception as e: st.error(e)
+        else: st.warning("Please enter notes and an API key.")
 
-# --- PILLAR 4: QUICK IMPROV TOOLS ---
+# --- PILLAR 4: QUICK IMPROV TOOLS (UPDATED WITH TAVERN & MAGIC SHOP) ---
 elif page == "🎭 Quick Improv Tools":
     st.title("🎭 Quick Improv Tools")
     st.write("For when your players completely ignore your prepared notes.")
     
-    # Tool 1: NPC Generator
-    with st.expander("🧙‍♂️ The 'Oh Crap' NPC Generator", expanded=False):
-        st.write("Instantly generate a memorable NPC.")
+    with st.expander("🧙‍♂️ The 'Oh Crap' NPC Generator"):
         npc_prompt = st.text_input("Who did the party just talk to?", "A suspicious tavern keeper with a limp")
-        
-        if st.button("Generate NPC"):
-            if not groq_api_key:
-                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
-            else:
-                with st.spinner("Summoning NPC..."):
-                    try:
-                        from groq import Groq
-                        client = Groq(api_key=groq_api_key)
-                        prompt = f"""
-                        Create a D&D NPC based on this description: "{npc_prompt}".
-                        Provide EXACTLY 3 bullet points:
-                        1. **Name:** (A fantasy name)
-                        2. **Quirk/Appearance:** (One distinct visual or behavioral trait)
-                        3. **Secret:** (Something they are hiding from the players)
-                        """
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant", 
-                        )
-                        generated_npc = chat_completion.choices[0].message.content
-                        st.success("✨ **NPC Generated:**")
-                        st.write(generated_npc)
-                        
-                        st.download_button(
-                            label="💾 Download NPC Card",
-                            data=generated_npc,
-                            file_name="NPC_Card.txt",
-                            mime="text/plain",
-                            width="stretch"
-                        )
-                    except Exception as e:
-                        st.error(f"Error connecting to Groq: {e}")
+        if st.button("Generate NPC") and groq_api_key:
+            with st.spinner("Summoning NPC..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                res = client.chat.completions.create(messages=[{"role": "user", "content": f"Create a D&D NPC: '{npc_prompt}'. Give Name, Quirk, and Secret."}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
+                
+    with st.expander("💰 The 'Loot Anxiety' Curer"):
+        party_level = st.slider("Average Party Level", 1, 20, 3)
+        loot_location = st.text_input("Location Found", "A dusty goblin treasury")
+        if st.button("Forge Balanced Loot") and groq_api_key:
+            with st.spinner("Forging item..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                res = client.chat.completions.create(messages=[{"role": "user", "content": f"Create ONE balanced, flavorful D&D magic item for a Level {party_level} party found in '{loot_location}'. Format: Name, Appearance, Mechanic."}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
 
-    # Tool 2: The Loot Anxiety Curer
-    with st.expander("💰 The 'Loot Anxiety' Curer", expanded=True):
-        st.write("Generate highly flavorful, balanced magic items that won't break your campaign's math.")
-        
-        col_lvl, col_theme = st.columns(2)
-        with col_lvl:
-            party_level = st.slider("Average Party Level", 1, 20, 3)
-        with col_theme:
-            loot_location = st.text_input("Location or Enemy Found On", "A dusty goblin treasury")
-            
-        if st.button("Forge Balanced Loot"):
-            if not groq_api_key:
-                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
-            else:
-                with st.spinner("Forging item..."):
-                    try:
-                        from groq import Groq
-                        client = Groq(api_key=groq_api_key)
-                        
-                        prompt = f"""
-                        Act as an expert D&D 5e game designer. 
-                        The DM wants to give a reward to a Level {party_level} party found in this location: "{loot_location}".
-                        The DM suffers from "Loot Anxiety" and is terrified of giving out game-breaking items. 
-                        
-                        Create ONE unique, flavorful magic item that is highly interesting but mechanically safe (e.g., utility-focused, highly situational, or has a fun non-combat mechanic). DO NOT just give a boring +1 to stats or damage.
-                        
-                        Provide EXACTLY 3 bullet points:
-                        - **Item Name:**
-                        - **Appearance:**
-                        - **Balanced Mechanic:**
-                        """
-                        
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant", 
-                        )
-                        generated_loot = chat_completion.choices[0].message.content
-                        st.success("💎 **Balanced Loot Generated:**")
-                        st.write(generated_loot)
-                        
-                        st.download_button(
-                            label="💾 Download Loot Card",
-                            data=generated_loot,
-                            file_name="Loot_Card.txt",
-                            mime="text/plain",
-                            width="stretch"
-                        )
-                    except Exception as e:
-                        st.error(f"Error connecting to Groq: {e}")
+    with st.expander("🍻 The Tavern Generator"):
+        tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
+        if st.button("Generate Tavern") and groq_api_key:
+            with st.spinner("Pouring drinks..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                prompt = f"Create a D&D tavern in a {tavern_wealth} area. Provide: 1. Tavern Name. 2. Barkeep's name/personality. 3. Signature Drink/Dish. 4. One juicy local rumor."
+                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
+                
+    with st.expander("🛍️ The Magic Shop Inventory"):
+        shop_vibe = st.text_input("Shop Vibe", "A shady back-alley potion vendor")
+        shop_level = st.slider("Party Level (Scales Gold Costs)", 1, 20, 3)
+        if st.button("Generate Inventory") and groq_api_key:
+            with st.spinner("Stocking shelves..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                prompt = f"Create a D&D magic shop inventory for '{shop_vibe}'. Generate exactly 5 items. Provide a Markdown table with columns: Item Name, Brief Description, and GP Cost (balanced for level {shop_level} characters)."
+                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
 
 # --- PILLAR 5: WORLDBUILDER'S FORGE ---
 elif page == "🌍 Worldbuilder's Forge":
     st.title("🌍 Worldbuilder's Forge")
-    st.write("Instantly generate rich, immersive lore and plot hooks for your campaign world using Llama 3.1.")
-    
     col_type, col_theme = st.columns(2)
-    with col_type:
-        lore_type = st.selectbox("What are we building?", ["A bustling city", "A forgotten ruin", "A powerful faction", "A pantheon deity", "A dangerous wilderness"])
-    with col_theme:
-        lore_theme = st.text_input("Core Theme or Vibe", "Steampunk but with corrupted magic crystals")
-        
-    if st.button("Forge Lore", type="primary"):
+    with col_type: lore_type = st.selectbox("What are we building?", ["A bustling city", "A forgotten ruin", "A powerful faction", "A pantheon deity"])
+    with col_theme: lore_theme = st.text_input("Core Theme or Vibe", "Steampunk but with corrupted magic crystals")
+    if st.button("Forge Lore", type="primary") and groq_api_key:
+        with st.spinner(f"Forging {lore_type.lower()}..."):
+            from groq import Groq
+            client = Groq(api_key=groq_api_key)
+            prompt = f"Subject: {lore_type}. Theme: {lore_theme}. Output in Markdown: ### 👁️ Visual Description, ### 📜 Key History, ### 🪝 Hidden Plot Hook."
+            res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+            st.write(res)
+            st.download_button("📥 Download Lore for Obsidian/Notion (.md)", res, "world_lore.md", "text/markdown")
+
+# --- PILLAR 6: SKILL CHALLENGE ARCHITECT ---
+elif page == "🎲 Skill Challenge Architect":
+    st.title("🎲 Skill Challenge Architect")
+    st.write("Instantly generate cinematic skill challenges for chases, escapes, and hazards.")
+    scenario = st.text_area("What cinematic scenario is the party facing?", "Fleeing a collapsing volcanic temple while carrying a heavy artifact.")
+    if st.button("Generate Skill Challenge", type="primary"):
         if not groq_api_key:
-            st.info("💡 Enter your Groq API key in the sidebar to unlock Llama 3.1's worldbuilding engine!")
+            st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
         else:
-            with st.spinner(f"Llama 3.1 is forging {lore_type.lower()}..."):
+            with st.spinner("Designing obstacles..."):
                 try:
                     from groq import Groq
                     client = Groq(api_key=groq_api_key)
                     prompt = f"""
-                    Act as an expert fantasy worldbuilder and D&D dungeon master.
-                    Create detailed, highly usable lore for a tabletop RPG campaign.
-                    
-                    Subject: {lore_type}
-                    Theme/Vibe: "{lore_theme}"
-                    
-                    Provide the output in Markdown format with EXACTLY these 3 sections:
-                    ### 👁️ Visual Description
-                    (A vivid 2-sentence description of what the players see when they first encounter it.)
-                    
-                    ### 📜 Key History
-                    (One major, dramatic event that shaped its current state.)
-                    
-                    ### 🪝 Hidden Plot Hook
-                    (A secret or looming threat for the players to discover, formatted as a clear quest idea.)
+                    Act as an expert D&D 5e game designer. Create a 3-stage Skill Challenge for this scenario: "{scenario}".
+                    Output EXACTLY 3 stages. For each stage, provide:
+                    - **The Obstacle:** What is happening right now?
+                    - **Primary Skill:** The most obvious skill to use (and its DC).
+                    - **Creative Alternative:** Another way players might solve it.
+                    - **Failure Consequence:** What happens if they fail this specific check?
                     """
                     chat_completion = client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
                         model="llama-3.1-8b-instant", 
                     )
-                    generated_lore = chat_completion.choices[0].message.content
-                    st.success("✨ **Worldbuilding Complete:**")
-                    st.write(generated_lore)
-                    
+                    challenge_output = chat_completion.choices[0].message.content
+                    st.success("🎲 **Skill Challenge Ready:**")
+                    st.write(challenge_output)
                     st.download_button(
-                        label="📥 Download Lore for Obsidian/Notion (.md)",
-                        data=generated_lore,
-                        file_name="world_lore.md",
+                        label="📥 Download Challenge (.md)",
+                        data=challenge_output,
+                        file_name="skill_challenge.md",
                         mime="text/markdown",
                         width="stretch"
                     )
