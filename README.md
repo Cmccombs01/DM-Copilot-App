@@ -19,6 +19,17 @@ Tabletop Game Masters frequently experience burnout due to the heavy administrat
 - **📜 Session Scribe:** An AI workflow automator that takes chaotic, unstructured session notes and uses prompt engineering to instantly generate a cohesive narrative journal entry. Includes 1-click Markdown exporting for Notion/Obsidian.
 - **🎭 Quick Improv Tools:** Micro-AI generators designed to solve immediate game-design problems. Includes the *"Oh Crap" NPC Generator* and the *"Loot Anxiety" Curer*, which generates highly flavorful, mechanically balanced magic items.
 - **🌍 Worldbuilder's Forge:** Instantly generate rich, immersive lore and plot hooks for your campaign world using Llama 3.1. Choose your location type and theme, and the AI will forge visual descriptions, historical events, and secret quest hooks with direct-to-Markdown exporting.
+- ## 🗺️ Future Roadmap
+
+* **🔌 Local LLM Support (Ollama / LM Studio)** — *(Status: Actively Building)* Privacy is paramount. Adding a sidebar toggle to bypass cloud APIs entirely, letting you point the generation engine at local, offline models running on your own hardware.
+* **🎙️ Live Session Transcription (Whisper API)** — *(Status: Planned)*
+    Instead of typing raw notes, DMs will be able to upload audio recordings of the session. The app will use Whisper to transcribe the audio and pass it directly to Llama 3.1 for summarization.
+* **🎲 VTT Export Integration (Foundry / Roll20)** — *(Status: Planned)*
+    Expanding the current Markdown exports to generate VTT-ready JSON files for homebrew monsters, NPCs, and magic items.
+* **📚 RAG-Powered Campaign Wiki** — *(Status: Planned)*
+    Allowing DMs to upload their massive 50-page campaign lore PDFs so the "Campaign Analyst" can read the whole document and answer hyper-specific lore questions.
+* **🐉 Expanded Pandas DataFrames** — *(Status: Planned)*
+    Expanding the Encounter Architect's active data-grid filtering to include lookup tables for spells and magic items.
 
 ## 💻 How to Run Locally
 1. Clone this repository to your local machine.
