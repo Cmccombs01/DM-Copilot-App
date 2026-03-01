@@ -29,6 +29,15 @@ st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebm
 # API Key Input 
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Settings")
+
+# THE NEW API WALKTHROUGH
+with st.sidebar.expander("❓ How to get a free API Key"):
+    st.write("1. Go to [GroqCloud Console](https://console.groq.com/keys).")
+    st.write("2. Log in or create a completely free account.")
+    st.write("3. Click **Create API Key**.")
+    st.write("4. Copy the key and paste it in the box below!")
+    st.caption("Note: Groq's Meta Llama 3.1 API is currently 100% free to use!")
+
 groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 
 # Create the menu buttons
