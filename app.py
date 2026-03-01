@@ -165,4 +165,101 @@ elif page == "🎭 Quick Improv Tools":
                 
     with st.expander("💰 The 'Loot Anxiety' Curer"):
         party_level = st.slider("Average Party Level", 1, 20, 3)
-        loot_location = st.text_input("Location Found",
+        loot_location = st.text_input("Location Found", "A dusty goblin treasury")
+        if st.button("Forge Balanced Loot") and groq_api_key:
+            with st.spinner("Forging item..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                prompt = f"""
+                Create ONE balanced, flavorful D&D magic item for a Level {party_level} party found in '{loot_location}'. 
+                Format: Name, Appearance, Mechanic.
+                """
+                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
+                st.download_button("💾 Download Loot Card", res, "Loot_Card.md", "text/markdown", width="stretch")
+
+    with st.expander("🍻 The Tavern Generator"):
+        tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
+        if st.button("Generate Tavern") and groq_api_key:
+            with st.spinner("Pouring drinks..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                prompt = f"""
+                Create a D&D tavern in a {tavern_wealth} area. 
+                Provide: 1. Tavern Name. 2. Barkeep's name/personality. 3. Signature Drink/Dish. 4. One juicy local rumor.
+                """
+                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
+                st.download_button("💾 Download Tavern Notes", res, "Tavern_Notes.md", "text/markdown", width="stretch")
+                
+    with st.expander("🛍️ The Magic Shop Inventory"):
+        shop_vibe = st.text_input("Shop Vibe", "A shady back-alley dwarven vendor")
+        shop_level = st.slider("Party Level (Scales Gold Costs)", 1, 20, 4)
+        if st.button("Generate Inventory") and groq_api_key:
+            with st.spinner("Stocking shelves..."):
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                prompt = f"""
+                Create a D&D magic shop inventory for '{shop_vibe}'. 
+                Generate exactly 5 items. Provide a Markdown table with columns: Item Name, Brief Description, and GP Cost (balanced for level {shop_level} characters).
+                """
+                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+                st.write(res)
+                st.download_button("💾 Download Shop Inventory", res, "Magic_Shop.md", "text/markdown", width="stretch")
+
+# --- PILLAR 5: WORLDBUILDER'S FORGE ---
+elif page == "🌍 Worldbuilder's Forge":
+    st.title("🌍 Worldbuilder's Forge")
+    col_type, col_theme = st.columns(2)
+    with col_type: lore_type = st.selectbox("What are we building?", ["A bustling city", "A forgotten ruin", "A powerful faction", "A pantheon deity"])
+    with col_theme: lore_theme = st.text_input("Core Theme or Vibe", "Steampunk but with corrupted magic crystals")
+    if st.button("Forge Lore", type="primary") and groq_api_key:
+        with st.spinner(f"Forging {lore_type.lower()}..."):
+            from groq import Groq
+            client = Groq(api_key=groq_api_key)
+            prompt = f"""
+            Subject: {lore_type}. 
+            Theme: {lore_theme}. 
+            Output in Markdown: ### 👁️ Visual Description, ### 📜 Key History, ### 🪝 Hidden Plot Hook.
+            """
+            res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+            st.write(res)
+            st.download_button("📥 Download Lore for Obsidian/Notion (.md)", res, "world_lore.md", "text/markdown", width="stretch")
+
+# --- PILLAR 6: SKILL CHALLENGE ARCHITECT ---
+elif page == "🎲 Skill Challenge Architect":
+    st.title("🎲 Skill Challenge Architect")
+    st.write("Instantly generate cinematic skill challenges for chases, escapes, and hazards.")
+    scenario = st.text_area("What cinematic scenario is the party facing?", "Fleeing a collapsing volcanic temple while carrying a heavy artifact.")
+    if st.button("Generate Skill Challenge", type="primary"):
+        if not groq_api_key:
+            st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
+        else:
+            with st.spinner("Designing obstacles..."):
+                try:
+                    from groq import Groq
+                    client = Groq(api_key=groq_api_key)
+                    prompt = f"""
+                    Act as an expert D&D 5e game designer. Create a 3-stage Skill Challenge for this scenario: "{scenario}".
+                    Output EXACTLY 3 stages. For each stage, provide:
+                    - **The Obstacle:** What is happening right now?
+                    - **Primary Skill:** The most obvious skill to use (and its DC).
+                    - **Creative Alternative:** Another way players might solve it.
+                    - **Failure Consequence:** What happens if they fail this specific check?
+                    """
+                    chat_completion = client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model="llama-3.1-8b-instant", 
+                    )
+                    challenge_output = chat_completion.choices[0].message.content
+                    st.success("🎲 **Skill Challenge Ready:**")
+                    st.write(challenge_output)
+                    st.download_button(
+                        label="📥 Download Challenge (.md)",
+                        data=challenge_output,
+                        file_name="skill_challenge.md",
+                        mime="text/markdown",
+                        width="stretch"
+                    )
+                except Exception as e:
+                    st.error(f"Error connecting to Groq: {e}")
