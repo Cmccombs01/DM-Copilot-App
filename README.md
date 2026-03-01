@@ -1,4 +1,5 @@
 # 🐉 DM Co-Pilot: AI-Powered Campaign Management Platform
+**[🔴 Play with the Live App Here!](https://dm-copilot-app.streamlit.app/)**
 
 ## 📌 The Business Problem
 Tabletop Game Masters frequently experience burnout due to the heavy administrative burden of running a campaign. Manually balancing game mechanics, filtering through hundreds of monster stats, managing player schedules, and writing weekly session summaries often takes 4+ hours of prep time per week. 
