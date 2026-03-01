@@ -38,10 +38,18 @@ with st.sidebar.expander("❓ How to get a free API Key"):
 
 groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 
-# Create the menu buttons (6 PILLARS)
+# Create the menu buttons (NOW 7 PILLARS)
 page = st.sidebar.radio(
     "Navigation",
-    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools", "🌍 Worldbuilder's Forge", "🎲 Skill Challenge Architect"]
+    [
+        "🤝 Campaign Matchmaker", 
+        "⚔️ Encounter Architect", 
+        "📜 Session Scribe", 
+        "🎭 Quick Improv Tools", 
+        "🌍 Worldbuilder's Forge", 
+        "🎲 Skill Challenge Architect",
+        "🧠 Campaign Analyst"
+    ]
 )
 
 st.sidebar.markdown("---")
@@ -258,6 +266,60 @@ elif page == "🎲 Skill Challenge Architect":
                         label="📥 Download Challenge (.md)",
                         data=challenge_output,
                         file_name="skill_challenge.md",
+                        mime="text/markdown",
+                        width="stretch"
+                    )
+                except Exception as e:
+                    st.error(f"Error connecting to Groq: {e}")
+
+# --- PILLAR 7: CAMPAIGN ANALYST ---
+elif page == "🧠 Campaign Analyst":
+    st.title("🧠 Campaign Analyst")
+    st.write("Paste your previous session summaries here. The AI will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
+    
+    past_sessions = st.text_area(
+        "Past Session Notes/Summaries", 
+        height=300, 
+        placeholder="Paste the text from your previous sessions here..."
+    )
+    
+    if st.button("Analyze Campaign", type="primary"):
+        if not groq_api_key:
+            st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
+        elif not past_sessions:
+            st.warning("⚠️ Please paste some session notes to analyze!")
+        else:
+            with st.spinner("Analyzing campaign data..."):
+                try:
+                    from groq import Groq
+                    client = Groq(api_key=groq_api_key)
+                    prompt = f"""
+                    Act as an expert D&D Campaign Manager and Narrative Analyst.
+                    Analyze the following past session summaries:
+                    {past_sessions}
+                    
+                    Provide a detailed report structured EXACTLY with these 3 Markdown headers:
+                    ### 🧵 Unresolved Plot Threads
+                    (Identify 2-3 dangling plot hooks or forgotten NPCs the DM can bring back)
+                    
+                    ### 🧠 Player Psychology
+                    (Analyze what types of encounters or gameplay the players seem to enjoy most based on these notes)
+                    
+                    ### 🔮 Next Session Prep Recommendations
+                    (Provide 2 specific, actionable ideas for what the DM should prep for the very next session)
+                    """
+                    chat_completion = client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model="llama-3.1-8b-instant", 
+                    )
+                    analysis_output = chat_completion.choices[0].message.content
+                    st.success("🧠 **Campaign Analysis Complete:**")
+                    st.write(analysis_output)
+                    
+                    st.download_button(
+                        label="📥 Download Analysis (.md)",
+                        data=analysis_output,
+                        file_name="campaign_analysis.md",
                         mime="text/markdown",
                         width="stretch"
                     )
