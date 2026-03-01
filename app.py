@@ -3,14 +3,11 @@ import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 
 # --- PAGE CONFIGURATION ---
-# (This must always be the very first Streamlit command)
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
 
 # --- ANALYTICS SETUP ---
-# Fetch the password securely from Streamlit Secrets
 ANALYTICS_PASSWORD = st.secrets["analytics_password"]
 
-# Wrap the entire app in the tracking context manager
 with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
     # --- LOAD DATA ---
@@ -28,26 +25,35 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     st.sidebar.title("🐉 DM Co-Pilot")
     st.sidebar.markdown("Your all-in-one Campaign Management Platform.")
 
-    # TIP JAR
     st.sidebar.markdown("---")
     st.sidebar.subheader("☕ Support the Creator")
     st.sidebar.write("If this tool saved your campaign, consider throwing a gold piece my way!")
     st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebmccombs)")
 
-    # API Key Input 
+    # --- AI PROVIDER SETTINGS ---
     st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ Settings")
+    st.sidebar.subheader("⚙️ AI Settings")
 
-    with st.sidebar.expander("❓ How to get a free API Key"):
-        st.write("1. Go to [GroqCloud Console](https://console.groq.com/keys).")
-        st.write("2. Log in or create a completely free account.")
-        st.write("3. Click **Create API Key**.")
-        st.write("4. Copy the key and paste it in the box below!")
-        st.caption("Note: Groq's Meta Llama 3.1 API is currently 100% free to use!")
+    llm_provider = st.sidebar.radio("AI Provider", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
 
-    groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
+    groq_api_key = ""
+    local_model = ""
 
-    # Create the menu buttons (NOW 7 PILLARS)
+    if llm_provider == "☁️ Groq (Cloud)":
+        with st.sidebar.expander("❓ How to get a free API Key"):
+            st.write("1. Go to [GroqCloud Console](https://console.groq.com/keys).")
+            st.write("2. Log in or create a completely free account.")
+            st.write("3. Click **Create API Key**.")
+            st.write("4. Copy the key and paste it in the box below!")
+            st.caption("Note: Groq's Meta Llama 3.1 API is currently 100% free to use!")
+        groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
+    else:
+        st.sidebar.success("Running completely offline!")
+        local_model = st.sidebar.selectbox("Select Local Model", ["llama3.1", "llama3", "mistral"])
+        st.sidebar.caption("Make sure the Ollama app is running on your machine.")
+        st.sidebar.warning("Note: Local mode only works when running the app locally on your computer, not via the live web URL.")
+
+    # --- MAIN NAVIGATION ---
     page = st.sidebar.radio(
         "Navigation",
         [
@@ -60,14 +66,49 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             "🧠 Campaign Analyst"
         ]
     )
-
     st.sidebar.markdown("---")
-    st.sidebar.caption("Powered by Python, Pandas, SQL & Meta Llama 3.1 (Groq)")
+    st.sidebar.caption("Powered by Python, Pandas, SQL & Meta Llama 3.1")
+
+    # ==========================================
+    # --- AI HELPER FUNCTION ---
+    # This handles routing prompts to either Groq or Ollama!
+    # ==========================================
+    def get_ai_response(prompt_text):
+        if llm_provider == "☁️ Groq (Cloud)":
+            if not groq_api_key:
+                st.warning("⚠️ Please enter your Groq API key in the sidebar.")
+                st.stop()
+            try:
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                chat_completion = client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt_text}], 
+                    model="llama-3.1-8b-instant"
+                )
+                return chat_completion.choices[0].message.content
+            except Exception as e:
+                st.error(f"Error connecting to Groq: {e}")
+                st.stop()
+        else:
+            try:
+                import ollama
+                response = ollama.chat(
+                    model=local_model, 
+                    messages=[{"role": "user", "content": prompt_text}]
+                )
+                return response['message']['content']
+            except Exception as e:
+                st.error(f"Error connecting to local Ollama: {e}. Is the Ollama app running?")
+                st.stop()
+
+    # ==========================================
+    # --- APP PILLARS ---
+    # ==========================================
 
     # --- PILLAR 1: CAMPAIGN MATCHMAKER ---
     if page == "🤝 Campaign Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        st.write("Filter players by timezone and playstyle, and let Llama 3.1 analyze bios for table compatibility.")
+        st.write("Filter players by timezone and playstyle, and let the AI analyze bios for table compatibility.")
         st.markdown("---")
         
         col1, col2 = st.columns(2)
@@ -91,24 +132,11 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             elif style_difference > 20:
                 st.warning(f"⚠️ Match Failed: Playstyle difference is {style_difference} points. Your logic requires a difference of 20 or less.")
             else:
-                st.success("✅ Match Passed! Sending to Llama 3.1...")
-                if not groq_api_key:
-                    st.info("💡 Enter your Groq API key in the sidebar to unlock Llama 3.1's AI analysis!")
-                else:
-                    with st.spinner("Analyzing compatibility..."):
-                        try:
-                            from groq import Groq
-                            client = Groq(api_key=groq_api_key)
-                            prompt = f"""
-                            ACT AS A MATCHMAKER. 
-                            DM Pitch: '{dm_pitch}'. 
-                            Player Bio: '{player_bio}'. 
-                            Give a compatibility score and a 2-sentence campaign intro blending both.
-                            """
-                            chat_completion = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant")
-                            st.write(chat_completion.choices[0].message.content)
-                        except Exception as e:
-                            st.error(f"Error connecting to Groq: {e}")
+                st.success("✅ Match Passed! Sending to AI...")
+                with st.spinner("Analyzing compatibility..."):
+                    prompt = f"ACT AS A MATCHMAKER. DM Pitch: '{dm_pitch}'. Player Bio: '{player_bio}'. Give a compatibility score and a 2-sentence campaign intro blending both."
+                    result = get_ai_response(prompt)
+                    st.write(result)
 
     # --- PILLAR 2: ENCOUNTER ARCHITECT ---
     elif page == "⚔️ Encounter Architect":
@@ -145,21 +173,13 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         st.write("Paste raw bullet points below, and the AI will rewrite them into a narrative summary.")
         raw_notes = st.text_area("Session Notes", height=200)
         if st.button("Generate Epic Summary", type="primary"):
-            if raw_notes and groq_api_key:
+            if raw_notes:
                 with st.spinner("Weaving notes into a story..."):
-                    try:
-                        from groq import Groq
-                        client = Groq(api_key=groq_api_key)
-                        prompt = f"""
-                        Turn these D&D session notes into a dramatic 3-paragraph journal entry: 
-                        {raw_notes}
-                        """
-                        chat_completion = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant")
-                        story = chat_completion.choices[0].message.content
-                        st.write(story)
-                        st.download_button("📥 Download for Notion/Obsidian (.md)", story, "session_summary.md", "text/markdown", width="stretch")
-                    except Exception as e: st.error(e)
-            else: st.warning("Please enter notes and an API key.")
+                    prompt = f"Turn these D&D session notes into a dramatic 3-paragraph journal entry: {raw_notes}"
+                    result = get_ai_response(prompt)
+                    st.write(result)
+                    st.download_button("📥 Download for Notion/Obsidian (.md)", result, "session_summary.md", "text/markdown", width="stretch")
+            else: st.warning("Please enter notes to summarize.")
 
     # --- PILLAR 4: QUICK IMPROV TOOLS ---
     elif page == "🎭 Quick Improv Tools":
@@ -168,61 +188,41 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         
         with st.expander("🧙‍♂️ The 'Oh Crap' NPC Generator"):
             npc_prompt = st.text_input("Who did the party just talk to?", "A suspicious tavern keeper with a limp")
-            if st.button("Generate NPC") and groq_api_key:
+            if st.button("Generate NPC"):
                 with st.spinner("Summoning NPC..."):
-                    from groq import Groq
-                    client = Groq(api_key=groq_api_key)
-                    prompt = f"""
-                    Create a D&D NPC: '{npc_prompt}'. 
-                    Give Name, Quirk, and Secret.
-                    """
-                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-                    st.write(res)
-                    st.download_button("💾 Download NPC Card", res, "NPC_Card.md", "text/markdown", width="stretch")
+                    prompt = f"Create a D&D NPC: '{npc_prompt}'. Give Name, Quirk, and Secret."
+                    result = get_ai_response(prompt)
+                    st.write(result)
+                    st.download_button("💾 Download NPC Card", result, "NPC_Card.md", "text/markdown", width="stretch")
                     
         with st.expander("💰 The 'Loot Anxiety' Curer"):
             party_level = st.slider("Average Party Level", 1, 20, 3)
             loot_location = st.text_input("Location Found", "A dusty goblin treasury")
-            if st.button("Forge Balanced Loot") and groq_api_key:
+            if st.button("Forge Balanced Loot"):
                 with st.spinner("Forging item..."):
-                    from groq import Groq
-                    client = Groq(api_key=groq_api_key)
-                    prompt = f"""
-                    Create ONE balanced, flavorful D&D magic item for a Level {party_level} party found in '{loot_location}'. 
-                    Format: Name, Appearance, Mechanic.
-                    """
-                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-                    st.write(res)
-                    st.download_button("💾 Download Loot Card", res, "Loot_Card.md", "text/markdown", width="stretch")
+                    prompt = f"Create ONE balanced, flavorful D&D magic item for a Level {party_level} party found in '{loot_location}'. Format: Name, Appearance, Mechanic."
+                    result = get_ai_response(prompt)
+                    st.write(result)
+                    st.download_button("💾 Download Loot Card", result, "Loot_Card.md", "text/markdown", width="stretch")
 
         with st.expander("🍻 The Tavern Generator"):
             tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
-            if st.button("Generate Tavern") and groq_api_key:
+            if st.button("Generate Tavern"):
                 with st.spinner("Pouring drinks..."):
-                    from groq import Groq
-                    client = Groq(api_key=groq_api_key)
-                    prompt = f"""
-                    Create a D&D tavern in a {tavern_wealth} area. 
-                    Provide: 1. Tavern Name. 2. Barkeep's name/personality. 3. Signature Drink/Dish. 4. One juicy local rumor.
-                    """
-                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-                    st.write(res)
-                    st.download_button("💾 Download Tavern Notes", res, "Tavern_Notes.md", "text/markdown", width="stretch")
+                    prompt = f"Create a D&D tavern in a {tavern_wealth} area. Provide: 1. Tavern Name. 2. Barkeep's name/personality. 3. Signature Drink/Dish. 4. One juicy local rumor."
+                    result = get_ai_response(prompt)
+                    st.write(result)
+                    st.download_button("💾 Download Tavern Notes", result, "Tavern_Notes.md", "text/markdown", width="stretch")
                     
         with st.expander("🛍️ The Magic Shop Inventory"):
             shop_vibe = st.text_input("Shop Vibe", "A shady back-alley dwarven vendor")
             shop_level = st.slider("Party Level (Scales Gold Costs)", 1, 20, 4)
-            if st.button("Generate Inventory") and groq_api_key:
+            if st.button("Generate Inventory"):
                 with st.spinner("Stocking shelves..."):
-                    from groq import Groq
-                    client = Groq(api_key=groq_api_key)
-                    prompt = f"""
-                    Create a D&D magic shop inventory for '{shop_vibe}'. 
-                    Generate exactly 5 items. Provide a Markdown table with columns: Item Name, Brief Description, and GP Cost (balanced for level {shop_level} characters).
-                    """
-                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-                    st.write(res)
-                    st.download_button("💾 Download Shop Inventory", res, "Magic_Shop.md", "text/markdown", width="stretch")
+                    prompt = f"Create a D&D magic shop inventory for '{shop_vibe}'. Generate exactly 5 items. Provide a Markdown table with columns: Item Name, Brief Description, and GP Cost (balanced for level {shop_level} characters)."
+                    result = get_ai_response(prompt)
+                    st.write(result)
+                    st.download_button("💾 Download Shop Inventory", result, "Magic_Shop.md", "text/markdown", width="stretch")
 
     # --- PILLAR 5: WORLDBUILDER'S FORGE ---
     elif page == "🌍 Worldbuilder's Forge":
@@ -230,18 +230,12 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         col_type, col_theme = st.columns(2)
         with col_type: lore_type = st.selectbox("What are we building?", ["A bustling city", "A forgotten ruin", "A powerful faction", "A pantheon deity"])
         with col_theme: lore_theme = st.text_input("Core Theme or Vibe", "Steampunk but with corrupted magic crystals")
-        if st.button("Forge Lore", type="primary") and groq_api_key:
+        if st.button("Forge Lore", type="primary"):
             with st.spinner(f"Forging {lore_type.lower()}..."):
-                from groq import Groq
-                client = Groq(api_key=groq_api_key)
-                prompt = f"""
-                Subject: {lore_type}. 
-                Theme: {lore_theme}. 
-                Output in Markdown: ### 👁️ Visual Description, ### 📜 Key History, ### 🪝 Hidden Plot Hook.
-                """
-                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-                st.write(res)
-                st.download_button("📥 Download Lore for Obsidian/Notion (.md)", res, "world_lore.md", "text/markdown", width="stretch")
+                prompt = f"Subject: {lore_type}. Theme: {lore_theme}. Output in Markdown: ### 👁️ Visual Description, ### 📜 Key History, ### 🪝 Hidden Plot Hook."
+                result = get_ai_response(prompt)
+                st.write(result)
+                st.download_button("📥 Download Lore for Obsidian/Notion (.md)", result, "world_lore.md", "text/markdown", width="stretch")
 
     # --- PILLAR 6: SKILL CHALLENGE ARCHITECT ---
     elif page == "🎲 Skill Challenge Architect":
@@ -249,37 +243,17 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         st.write("Instantly generate cinematic skill challenges for chases, escapes, and hazards.")
         scenario = st.text_area("What cinematic scenario is the party facing?", "Fleeing a collapsing volcanic temple while carrying a heavy artifact.")
         if st.button("Generate Skill Challenge", type="primary"):
-            if not groq_api_key:
-                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
-            else:
-                with st.spinner("Designing obstacles..."):
-                    try:
-                        from groq import Groq
-                        client = Groq(api_key=groq_api_key)
-                        prompt = f"""
-                        Act as an expert D&D 5e game designer. Create a 3-stage Skill Challenge for this scenario: "{scenario}".
-                        Output EXACTLY 3 stages. For each stage, provide:
-                        - **The Obstacle:** What is happening right now?
-                        - **Primary Skill:** The most obvious skill to use (and its DC).
-                        - **Creative Alternative:** Another way players might solve it.
-                        - **Failure Consequence:** What happens if they fail this specific check?
-                        """
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant", 
-                        )
-                        challenge_output = chat_completion.choices[0].message.content
-                        st.success("🎲 **Skill Challenge Ready:**")
-                        st.write(challenge_output)
-                        st.download_button(
-                            label="📥 Download Challenge (.md)",
-                            data=challenge_output,
-                            file_name="skill_challenge.md",
-                            mime="text/markdown",
-                            width="stretch"
-                        )
-                    except Exception as e:
-                        st.error(f"Error connecting to Groq: {e}")
+            with st.spinner("Designing obstacles..."):
+                prompt = f"""Act as an expert D&D 5e game designer. Create a 3-stage Skill Challenge for this scenario: "{scenario}".
+                Output EXACTLY 3 stages. For each stage, provide:
+                - **The Obstacle:** What is happening right now?
+                - **Primary Skill:** The most obvious skill to use (and its DC).
+                - **Creative Alternative:** Another way players might solve it.
+                - **Failure Consequence:** What happens if they fail this specific check?"""
+                result = get_ai_response(prompt)
+                st.success("🎲 **Skill Challenge Ready:**")
+                st.write(result)
+                st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
     # --- PILLAR 7: CAMPAIGN ANALYST ---
     elif page == "🧠 Campaign Analyst":
@@ -293,44 +267,24 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         )
         
         if st.button("Analyze Campaign", type="primary"):
-            if not groq_api_key:
-                st.info("💡 Enter your Groq API key in the sidebar to unlock this feature!")
-            elif not past_sessions:
+            if not past_sessions:
                 st.warning("⚠️ Please paste some session notes to analyze!")
             else:
                 with st.spinner("Analyzing campaign data..."):
-                    try:
-                        from groq import Groq
-                        client = Groq(api_key=groq_api_key)
-                        prompt = f"""
-                        Act as an expert D&D Campaign Manager and Narrative Analyst.
-                        Analyze the following past session summaries:
-                        {past_sessions}
-                        
-                        Provide a detailed report structured EXACTLY with these 3 Markdown headers:
-                        ### 🧵 Unresolved Plot Threads
-                        (Identify 2-3 dangling plot hooks or forgotten NPCs the DM can bring back)
-                        
-                        ### 🧠 Player Psychology
-                        (Analyze what types of encounters or gameplay the players seem to enjoy most based on these notes)
-                        
-                        ### 🔮 Next Session Prep Recommendations
-                        (Provide 2 specific, actionable ideas for what the DM should prep for the very next session)
-                        """
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant", 
-                        )
-                        analysis_output = chat_completion.choices[0].message.content
-                        st.success("🧠 **Campaign Analysis Complete:**")
-                        st.write(analysis_output)
-                        
-                        st.download_button(
-                            label="📥 Download Analysis (.md)",
-                            data=analysis_output,
-                            file_name="campaign_analysis.md",
-                            mime="text/markdown",
-                            width="stretch"
-                        )
-                    except Exception as e:
-                        st.error(f"Error connecting to Groq: {e}")
+                    prompt = f"""Act as an expert D&D Campaign Manager and Narrative Analyst.
+                    Analyze the following past session summaries:
+                    {past_sessions}
+                    
+                    Provide a detailed report structured EXACTLY with these 3 Markdown headers:
+                    ### 🧵 Unresolved Plot Threads
+                    (Identify 2-3 dangling plot hooks or forgotten NPCs the DM can bring back)
+                    
+                    ### 🧠 Player Psychology
+                    (Analyze what types of encounters or gameplay the players seem to enjoy most based on these notes)
+                    
+                    ### 🔮 Next Session Prep Recommendations
+                    (Provide 2 specific, actionable ideas for what the DM should prep for the very next session)"""
+                    result = get_ai_response(prompt)
+                    st.success("🧠 **Campaign Analysis Complete:**")
+                    st.write(result)
+                    st.download_button(label="📥 Download Analysis (.md)", data=result, file_name="campaign_analysis.md", mime="text/markdown", width="stretch")
