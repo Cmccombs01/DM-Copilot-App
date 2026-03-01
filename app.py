@@ -19,6 +19,13 @@ monster_df = load_monster_data()
 st.sidebar.title("🐉 DM Co-Pilot")
 st.sidebar.markdown("Your all-in-one Campaign Management Platform.")
 
+# TIP JAR (MONETIZATION)
+st.sidebar.markdown("---")
+st.sidebar.subheader("☕ Support the Creator")
+st.sidebar.write("If this tool saved your campaign, consider throwing a gold piece my way!")
+# YOUR CUSTOM TIP LINK:
+st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebmccombs)")
+
 # API Key Input 
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Settings")
