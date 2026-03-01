@@ -23,7 +23,6 @@ st.sidebar.markdown("Your all-in-one Campaign Management Platform.")
 st.sidebar.markdown("---")
 st.sidebar.subheader("☕ Support the Creator")
 st.sidebar.write("If this tool saved your campaign, consider throwing a gold piece my way!")
-# YOUR CUSTOM TIP LINK:
 st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebmccombs)")
 
 # API Key Input 
@@ -40,10 +39,10 @@ with st.sidebar.expander("❓ How to get a free API Key"):
 
 groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 
-# Create the menu buttons
+# Create the menu buttons (UPDATED WITH WORLDBUILDER'S FORGE)
 page = st.sidebar.radio(
     "Navigation",
-    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools"]
+    ["🤝 Campaign Matchmaker", "⚔️ Encounter Architect", "📜 Session Scribe", "🎭 Quick Improv Tools", "🌍 Worldbuilder's Forge"]
 )
 
 st.sidebar.markdown("---")
@@ -106,25 +105,33 @@ if page == "🤝 Campaign Matchmaker":
                     except Exception as e:
                         st.error(f"Error connecting to Groq: {e}")
 
-# --- PILLAR 2: ENCOUNTER ARCHITECT ---
+# --- PILLAR 2: ENCOUNTER ARCHITECT (NOW WITH LIVE COMBAT TRACKER) ---
 elif page == "⚔️ Encounter Architect":
     st.title("⚔️ Encounter Architect")
-    st.write("Math-free combat balancing and homebrew creation tools.")
+    st.write("Math-free combat balancing and active encounter tracking.")
     
     tab1, tab2 = st.tabs(["🐉 Official 5.5e Monsters", "🛠️ Homebrew CR Calculator"])
     
     with tab1:
-        st.subheader("Filter the 5.5e Monster Database")
+        st.subheader("Active Combat Tracker")
         if monster_df is not None:
             min_cr, max_cr = st.slider("Select Challenge Rating (CR) Range", 0, 30, (1, 5))
             filtered_df = monster_df[(monster_df['CR'] >= min_cr) & (monster_df['CR'] <= max_cr)]
             
             st.write(f"Found **{len(filtered_df)}** monsters in that CR range.")
             
+            # --- THE NEW ACTIVE COMBAT TRACKER LOGIC ---
+            # Create a copy of the dataframe specifically for combat
+            combat_df = filtered_df[['Name', 'Sourcebook', 'CR', 'HP', 'AC', 'DPR']].copy()
+            # Insert a Current HP column right next to Max HP
+            combat_df.insert(3, 'Current HP', combat_df['HP'])
+            
+            st.caption("Double-click any cell in the 'Current HP' column below to actively track damage during your session!")
+            # Use data_editor instead of dataframe so the user can type in it!
+            st.data_editor(combat_df, width="stretch", hide_index=True)
+            
             st.markdown("##### 📊 CR vs. Hit Points Analysis")
             st.scatter_chart(filtered_df, x='CR', y='HP', color='#ff4b4b')
-            
-            st.dataframe(filtered_df[['Name', 'Sourcebook', 'CR', 'HP', 'AC', 'DPR']], width="stretch")
         else:
             st.error("⚠️ `monsters.csv` not found! Please make sure it is saved in the same folder as `app.py`.")
 
@@ -288,3 +295,57 @@ elif page == "🎭 Quick Improv Tools":
                         )
                     except Exception as e:
                         st.error(f"Error connecting to Groq: {e}")
+
+# --- PILLAR 5: WORLDBUILDER'S FORGE ---
+elif page == "🌍 Worldbuilder's Forge":
+    st.title("🌍 Worldbuilder's Forge")
+    st.write("Instantly generate rich, immersive lore and plot hooks for your campaign world using Llama 3.1.")
+    
+    col_type, col_theme = st.columns(2)
+    with col_type:
+        lore_type = st.selectbox("What are we building?", ["A bustling city", "A forgotten ruin", "A powerful faction", "A pantheon deity", "A dangerous wilderness"])
+    with col_theme:
+        lore_theme = st.text_input("Core Theme or Vibe", "Steampunk but with corrupted magic crystals")
+        
+    if st.button("Forge Lore", type="primary"):
+        if not groq_api_key:
+            st.info("💡 Enter your Groq API key in the sidebar to unlock Llama 3.1's worldbuilding engine!")
+        else:
+            with st.spinner(f"Llama 3.1 is forging {lore_type.lower()}..."):
+                try:
+                    from groq import Groq
+                    client = Groq(api_key=groq_api_key)
+                    prompt = f"""
+                    Act as an expert fantasy worldbuilder and D&D dungeon master.
+                    Create detailed, highly usable lore for a tabletop RPG campaign.
+                    
+                    Subject: {lore_type}
+                    Theme/Vibe: "{lore_theme}"
+                    
+                    Provide the output in Markdown format with EXACTLY these 3 sections:
+                    ### 👁️ Visual Description
+                    (A vivid 2-sentence description of what the players see when they first encounter it.)
+                    
+                    ### 📜 Key History
+                    (One major, dramatic event that shaped its current state.)
+                    
+                    ### 🪝 Hidden Plot Hook
+                    (A secret or looming threat for the players to discover, formatted as a clear quest idea.)
+                    """
+                    chat_completion = client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model="llama-3.1-8b-instant", 
+                    )
+                    generated_lore = chat_completion.choices[0].message.content
+                    st.success("✨ **Worldbuilding Complete:**")
+                    st.write(generated_lore)
+                    
+                    st.download_button(
+                        label="📥 Download Lore for Obsidian/Notion (.md)",
+                        data=generated_lore,
+                        file_name="world_lore.md",
+                        mime="text/markdown",
+                        width="stretch"
+                    )
+                except Exception as e:
+                    st.error(f"Error connecting to Groq: {e}")
