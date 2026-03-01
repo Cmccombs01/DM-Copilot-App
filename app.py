@@ -137,4 +137,4 @@ elif page == "⚔️ Encounter Architect":
         with col_hp:
             homebrew_hp = st.number_input("Hit Points (HP)", min_value=1, value=50)
         with col_ac:
-            homebrew_ac = st.number_input("Armor Class (AC)", min_value=1,
+           homebrew_ac = st.number_input("Armor Class (AC)", min_value=1, value=13)
