@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import json 
-import PyPDF2 # <-- Added for our PDF Extraction!
+import PyPDF2 
+import chromadb # <-- Added our vector database!
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -285,15 +286,13 @@ Use this exact JSON structure:
                 st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
     # ==========================================
-    # --- UPDATED: CAMPAIGN ANALYST & WIKI ---
+    # --- CAMPAIGN ANALYST & WIKI ---
     # ==========================================
     elif page == "🧠 Campaign Analyst":
         st.title("🧠 Campaign Analyst & Wiki")
         
-        # We split this page into two tabs!
         tab_analyst, tab_wiki = st.tabs(["📝 Past Session Analyzer", "📚 Campaign Wiki (RAG)"])
         
-        # --- TAB 1: Your original Session Analyzer ---
         with tab_analyst:
             st.write("Paste your previous session summaries here. The AI will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
             past_sessions = st.text_area(
@@ -319,35 +318,46 @@ Use this exact JSON structure:
                         st.write(result)
                         st.download_button("📥 Download Analysis (.md)", result, "campaign_analysis.md", "text/markdown", width="stretch")
         
-        # --- TAB 2: The New PDF Uploader and Chunker! ---
         with tab_wiki:
             st.write("Upload a massive lore PDF, and the app will chop it into manageable data chunks for the AI to read.")
             
-            # 1. The Uploader Widget
             uploaded_pdf = st.file_uploader("Upload Campaign Lore (PDF)", type="pdf")
             
             if uploaded_pdf is not None:
                 st.success(f"✅ Loaded: {uploaded_pdf.name}")
                 
-                # 2. Extract Text Function
                 with st.spinner("Extracting text from PDF..."):
                     pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
                     raw_text = ""
                     for page in pdf_reader.pages:
                         raw_text += page.extract_text() + "\n"
                         
-                st.info(f"📄 Total characters extracted: {len(raw_text)}")
-                
-                # 3. The Chunker Function
                 with st.spinner("Chopping text into chunks..."):
                     words = raw_text.split()
                     chunk_size = 500
-                    # This slices the massive list of words into sub-lists of 500 words each
                     chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
                     
                 st.success(f"🔪 Successfully chopped into {len(chunks)} searchable chunks!")
                 
-                # Quick verification UI so you can see it working
-                with st.expander("👀 View Chunk #1"):
-                    if len(chunks) > 0:
-                        st.write(chunks[0])
+                # --- NEW CHROMA DB LOGIC ---
+                if len(chunks) > 0:
+                    with st.spinner("🧠 Converting chunks into mathematical embeddings (this may take a moment)..."):
+                        # Initialize ChromaDB in memory
+                        chroma_client = chromadb.Client()
+                        
+                        # Create a clean slate collection (database table)
+                        try:
+                            chroma_client.delete_collection(name="campaign_lore")
+                        except:
+                            pass
+                        
+                        collection = chroma_client.create_collection(name="campaign_lore")
+                        
+                        # Feed the chunks into the database with unique IDs
+                        ids = [f"chunk_{i}" for i in range(len(chunks))]
+                        collection.add(
+                            documents=chunks,
+                            ids=ids
+                        )
+                    
+                    st.success("✅ AI Memory successfully built! The document is ready to be searched.")
