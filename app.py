@@ -45,6 +45,11 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     st.sidebar.markdown("Your all-in-one Campaign Management Platform.")
 
     st.sidebar.markdown("---")
+    st.sidebar.subheader("🏰 The Deep-Delver's Grimoire")
+    st.sidebar.write("Share your AI-generated loot, NPCs, and campaign lore with other DMs!")
+    st.sidebar.markdown("[**💬 Join the Discord Community**](https://discord.gg/6gS3sFvZed)")
+
+    st.sidebar.markdown("---")
     st.sidebar.subheader("☕ Support the Creator")
     st.sidebar.write("If this tool saved your campaign, consider throwing a gold piece my way!")
     st.sidebar.markdown("[**☕ Tip the Developer**](https://buymeacoffee.com/calebmccombs)")
@@ -357,7 +362,7 @@ Use this exact JSON structure:
                 st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
     # ==========================================
-    # --- CAMPAIGN ANALYST & WIKI (SCIKIT-LEARN FIX) ---
+    # --- CAMPAIGN ANALYST & WIKI ---
     # ==========================================
     elif page == "🧠 Campaign Analyst":
         st.title("🧠 Campaign Analyst & Wiki")
@@ -410,7 +415,6 @@ Use this exact JSON structure:
                     
                 st.success(f"🔪 Successfully chopped into {len(chunks)} searchable chunks!")
                 
-                # --- NEW SCIKIT-LEARN RAG LOGIC ---
                 if len(chunks) > 0:
                     with st.spinner("🧠 Converting chunks into mathematical vectors (this takes just a second)..."):
                         vectorizer = TfidfVectorizer()
@@ -428,11 +432,9 @@ Use this exact JSON structure:
                             st.write(user_question)
                             
                         with st.spinner("Searching the archives..."):
-                            # Transform the question and calculate similarity
                             question_vec = vectorizer.transform([user_question])
                             similarities = cosine_similarity(question_vec, tfidf_matrix).flatten()
                             
-                            # Get the top 3 most similar chunks
                             top_3_indices = similarities.argsort()[-3:][::-1]
                             top_chunks = [chunks[i] for i in top_3_indices]
                             
