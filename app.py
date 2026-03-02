@@ -46,7 +46,7 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏰 The Deep-Delver's Grimoire")
-    st.sidebar.write("Share your AI-generated loot, NPCs, and campaign lore with other DMs!")
+    st.sidebar.write("Share your generated loot, NPCs, and campaign lore with other DMs!")
     st.sidebar.markdown("[**💬 Join the Discord Community**](https://discord.gg/6gS3sFvZed)")
 
     st.sidebar.markdown("---")
@@ -56,9 +56,9 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
     # --- AI PROVIDER SETTINGS ---
     st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ AI Settings")
+    st.sidebar.subheader("⚙️ Engine Settings")
 
-    llm_provider = st.sidebar.radio("AI Provider", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
+    llm_provider = st.sidebar.radio("Processing Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
 
     groq_api_key = ""
     local_model = ""
@@ -84,10 +84,10 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             "🤝 Campaign Matchmaker", 
             "⚔️ Encounter Architect", 
             "📜 Session Scribe", 
-            "🎭 Quick Improv Tools", 
+            "🎭 Procedural Improv Tools", 
             "🌍 Worldbuilder's Forge", 
             "🎲 Skill Challenge Architect",
-            "🧠 Campaign Analyst"
+            "🧠 Digital DM Assistant"
         ]
     )
     st.sidebar.markdown("---")
@@ -130,7 +130,7 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
     if page == "🤝 Campaign Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        st.write("Filter players by timezone and playstyle, and let the AI analyze bios for table compatibility.")
+        st.write("Filter players by timezone and playstyle, and analyze bios for table compatibility.")
         st.markdown("---")
         
         col1, col2 = st.columns(2)
@@ -154,11 +154,46 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             elif style_difference > 20:
                 st.warning(f"⚠️ Match Failed: Playstyle difference is {style_difference} points. Your logic requires a difference of 20 or less.")
             else:
-                st.success("✅ Match Passed! Sending to AI...")
+                st.success("✅ Match Passed! Processing compatibility...")
                 with st.spinner("Analyzing compatibility..."):
                     prompt = f"ACT AS A MATCHMAKER. DM Pitch: '{dm_pitch}'. Player Bio: '{player_bio}'. Give a compatibility score and a 2-sentence campaign intro blending both."
                     result = get_ai_response(prompt)
                     st.write(result)
+
+        # ==========================================
+        # 📢 LFG POST ARCHITECT
+        # ==========================================
+        st.markdown("---")
+        st.subheader("📢 LFG Post Architect")
+        st.write("Need players? Generate a highly-optimized Reddit/Discord LFG post that bypasses auto-moderators.")
+        
+        with st.expander("Draft Your Recruitment Flyer"):
+            lfg_system = st.text_input("System & VTT", "D&D 5e on Foundry VTT")
+            lfg_reqs = st.text_input("Player Requirements", "18+, LGBTQ+ Friendly, Mic Required")
+            lfg_cta = st.text_input("How to Apply", "Send me a direct message on Discord with your favorite class!")
+            
+            if st.button("Generate LFG Post", use_container_width=True):
+                with st.spinner("Drafting your recruitment flyer..."):
+                    prompt = f"""
+                    Act as an expert D&D Community Manager. Write a highly engaging "Looking for Group" (LFG) post for Reddit (r/lfg).
+                    System/Platform: {lfg_system}
+                    Campaign Hook: {dm_pitch}
+                    Requirements: {lfg_reqs}
+                    How to Apply: {lfg_cta}
+                    
+                    Format it strictly in Markdown with:
+                    - A perfectly formatted Reddit title (e.g., [Online][5e]...)
+                    - **The World:** (Expand slightly on the hook)
+                    - **What I Expect:** (Incorporate the requirements)
+                    - **How to Join:** (The call to action)
+                    
+                    End the post with this exact line:
+                    *We play in The Deep-Delver's Grimoire Discord server, a community of DMs and players!*
+                    """
+                    result = get_ai_response(prompt)
+                    st.success("✅ Post Generated! Copy and paste this directly to Reddit.")
+                    st.write(result)
+                    st.download_button("💾 Download Post (.md)", result, "lfg_post.md", "text/markdown", width="stretch")
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
@@ -221,7 +256,7 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                     st.warning("Please enter notes to summarize.")
                     
         with tab_audio:
-            st.info("Upload a voice memo recap of your session. The AI will transcribe it and turn it into a journal entry!")
+            st.info("Upload a voice memo recap of your session. The engine will transcribe it and turn it into a journal entry!")
             audio_file = st.file_uploader("Upload Audio (.mp3, .wav, .m4a)", type=["mp3", "wav", "m4a"])
             
             if st.button("Transcribe & Summarize", type="primary"):
@@ -256,8 +291,8 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                 else:
                     st.warning("Please upload an audio file.")
 
-    elif page == "🎭 Quick Improv Tools":
-        st.title("🎭 Quick Improv Tools")
+    elif page == "🎭 Procedural Improv Tools":
+        st.title("🎭 Procedural Improv Tools")
         st.write("For when your players completely ignore your prepared notes.")
 
         # --- NEW INITIATIVE TRACKER ---
@@ -336,7 +371,7 @@ Use this exact JSON structure:
                             width="stretch" 
                         )
                     except json.JSONDecodeError:
-                        st.error("⚠️ The AI failed to format the item correctly. Please click Forge again!")
+                        st.error("⚠️ The generation failed to format the item correctly. Please click Forge again!")
                         st.code(raw_result) 
 
         # --- UPGRADED TAVERN GENERATOR ---
@@ -397,15 +432,15 @@ Use this exact JSON structure:
                 st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
     # ==========================================
-    # --- CAMPAIGN ANALYST & WIKI ---
+    # --- DIGITAL DM ASSISTANT & WIKI ---
     # ==========================================
-    elif page == "🧠 Campaign Analyst":
-        st.title("🧠 Campaign Analyst & Wiki")
+    elif page == "🧠 Digital DM Assistant":
+        st.title("🧠 Digital DM Assistant & Wiki")
         
         tab_analyst, tab_wiki = st.tabs(["📝 Past Session Analyzer", "📚 Campaign Wiki (RAG)"])
         
         with tab_analyst:
-            st.write("Paste your previous session summaries here. The AI will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
+            st.write("Paste your previous session summaries here. The assistant will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
             past_sessions = st.text_area(
                 "Past Session Notes/Summaries", 
                 height=300, 
@@ -430,7 +465,7 @@ Use this exact JSON structure:
                         st.download_button("📥 Download Analysis (.md)", result, "campaign_analysis.md", "text/markdown", width="stretch")
         
         with tab_wiki:
-            st.write("Upload a massive lore PDF, and the app will chop it into manageable data chunks for the AI to read.")
+            st.write("Upload a massive lore PDF, and the app will chop it into manageable data chunks to read.")
             
             uploaded_pdf = st.file_uploader("Upload Campaign Lore (PDF)", type="pdf")
             
@@ -455,7 +490,7 @@ Use this exact JSON structure:
                         vectorizer = TfidfVectorizer()
                         tfidf_matrix = vectorizer.fit_transform(chunks)
                     
-                    st.success("✅ AI Memory successfully built! The document is ready to be searched.")
+                    st.success("✅ Memory successfully built! The document is ready to be searched.")
                     
                     st.markdown("---")
                     st.subheader("💬 Chat with your Lore")
