@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
-import json # <-- Added this for the VTT JSON export!
+import json 
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -196,7 +196,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                     st.write(result)
                     st.download_button("💾 Download NPC Card", result, "NPC_Card.md", "text/markdown", width="stretch")
                     
-        # === UPDATED LOOT GENERATOR FOR VTT JSON EXPORT ===
         with st.expander("💰 The 'Loot Anxiety' Curer"):
             party_level = st.slider("Average Party Level", 1, 20, 3)
             loot_location = st.text_input("Location Found", "A dusty goblin treasury")
@@ -234,13 +233,13 @@ Use this exact JSON structure:
                         st.success("✅ Item successfully forged!")
                         st.json(json_data) 
                         
-                        # Create the VTT Download Button
+                        # Create the VTT Download Button (WARNING FIXED HERE)
                         st.download_button(
                             label="📥 Export for Foundry VTT (.json)", 
                             data=raw_result, 
                             file_name="magic_item.json", 
                             mime="application/json",
-                            use_container_width=True 
+                            width="stretch" 
                         )
                         
                     except json.JSONDecodeError:
