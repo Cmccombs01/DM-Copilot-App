@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
+import json # <-- Added this for the VTT JSON export!
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -195,15 +196,57 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                     st.write(result)
                     st.download_button("💾 Download NPC Card", result, "NPC_Card.md", "text/markdown", width="stretch")
                     
+        # === UPDATED LOOT GENERATOR FOR VTT JSON EXPORT ===
         with st.expander("💰 The 'Loot Anxiety' Curer"):
             party_level = st.slider("Average Party Level", 1, 20, 3)
             loot_location = st.text_input("Location Found", "A dusty goblin treasury")
+            
             if st.button("Forge Balanced Loot"):
                 with st.spinner("Forging item..."):
-                    prompt = f"Create ONE balanced, flavorful D&D magic item for a Level {party_level} party found in '{loot_location}'. Format: Name, Appearance, Mechanic."
-                    result = get_ai_response(prompt)
-                    st.write(result)
-                    st.download_button("💾 Download Loot Card", result, "Loot_Card.md", "text/markdown", width="stretch")
+                    prompt = f"""Act as an expert D&D 5e game designer. Create ONE balanced, flavorful magic item for a Level {party_level} party found in '{loot_location}'.
+
+You MUST respond with ONLY a valid JSON object. Do NOT wrap the output in markdown code blocks. Do NOT include any conversational text before or after the JSON.
+
+Use this exact JSON structure:
+{{
+  "name": "Item Name",
+  "type": "weapon",
+  "system": {{
+    "description": {{
+      "value": "Detailed appearance and mechanical effects go here."
+    }},
+    "source": "DM Co-Pilot",
+    "rarity": "rare",
+    "price": {{
+      "value": 500,
+      "denomination": "gp"
+    }},
+    "attunement": true
+  }}
+}}"""
+                    raw_result = get_ai_response(prompt) 
+                    
+                    try:
+                        # Validate the JSON
+                        json_data = json.loads(raw_result) 
+                        
+                        # Display Success and the JSON UI
+                        st.success("✅ Item successfully forged!")
+                        st.json(json_data) 
+                        
+                        # Create the VTT Download Button
+                        st.download_button(
+                            label="📥 Export for Foundry VTT (.json)", 
+                            data=raw_result, 
+                            file_name="magic_item.json", 
+                            mime="application/json",
+                            use_container_width=True 
+                        )
+                        
+                    except json.JSONDecodeError:
+                        # Catch AI hallucinations
+                        st.error("⚠️ The AI failed to format the item correctly. Please click Forge again!")
+                        st.code(raw_result) # Prints out what the AI messed up so you can see it
 
         with st.expander("🍻 The Tavern Generator"):
             tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
