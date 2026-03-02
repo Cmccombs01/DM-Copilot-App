@@ -1,3 +1,4 @@
 pandas
 groq
 streamlit-analytics2
+ollama
