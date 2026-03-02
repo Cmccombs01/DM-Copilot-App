@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import json 
+import PyPDF2 # <-- Added for our PDF Extraction!
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -72,7 +73,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
     # ==========================================
     # --- AI HELPER FUNCTION ---
-    # This handles routing prompts to either Groq or Ollama!
     # ==========================================
     def get_ai_response(prompt_text):
         if llm_provider == "☁️ Groq (Cloud)":
@@ -106,7 +106,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     # --- APP PILLARS ---
     # ==========================================
 
-    # --- PILLAR 1: CAMPAIGN MATCHMAKER ---
     if page == "🤝 Campaign Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         st.write("Filter players by timezone and playstyle, and let the AI analyze bios for table compatibility.")
@@ -139,7 +138,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                     result = get_ai_response(prompt)
                     st.write(result)
 
-    # --- PILLAR 2: ENCOUNTER ARCHITECT ---
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
         st.write("Math-free combat balancing and active encounter tracking.")
@@ -168,7 +166,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                 final_cr = max(0, round(((homebrew_hp / 15) + ((homebrew_ac - 13) / 2) + (homebrew_dpr / 5)) / 2))
                 st.success(f"⚔️ **Estimated Challenge Rating: CR {final_cr}**")
 
-    # --- PILLAR 3: SESSION SCRIBE ---
     elif page == "📜 Session Scribe":
         st.title("📜 Session Scribe")
         st.write("Paste raw bullet points below, and the AI will rewrite them into a narrative summary.")
@@ -182,7 +179,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                     st.download_button("📥 Download for Notion/Obsidian (.md)", result, "session_summary.md", "text/markdown", width="stretch")
             else: st.warning("Please enter notes to summarize.")
 
-    # --- PILLAR 4: QUICK IMPROV TOOLS ---
     elif page == "🎭 Quick Improv Tools":
         st.title("🎭 Quick Improv Tools")
         st.write("For when your players completely ignore your prepared notes.")
@@ -226,14 +222,9 @@ Use this exact JSON structure:
                     raw_result = get_ai_response(prompt) 
                     
                     try:
-                        # Validate the JSON
                         json_data = json.loads(raw_result) 
-                        
-                        # Display Success and the JSON UI
                         st.success("✅ Item successfully forged!")
                         st.json(json_data) 
-                        
-                        # Create the VTT Download Button (WARNING FIXED HERE)
                         st.download_button(
                             label="📥 Export for Foundry VTT (.json)", 
                             data=raw_result, 
@@ -241,11 +232,9 @@ Use this exact JSON structure:
                             mime="application/json",
                             width="stretch" 
                         )
-                        
                     except json.JSONDecodeError:
-                        # Catch AI hallucinations
                         st.error("⚠️ The AI failed to format the item correctly. Please click Forge again!")
-                        st.code(raw_result) # Prints out what the AI messed up so you can see it
+                        st.code(raw_result) 
 
         with st.expander("🍻 The Tavern Generator"):
             tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
@@ -266,7 +255,6 @@ Use this exact JSON structure:
                     st.write(result)
                     st.download_button("💾 Download Shop Inventory", result, "Magic_Shop.md", "text/markdown", width="stretch")
 
-    # --- PILLAR 5: WORLDBUILDER'S FORGE ---
     elif page == "🌍 Worldbuilder's Forge":
         st.title("🌍 Worldbuilder's Forge")
         col_type, col_theme = st.columns(2)
@@ -279,7 +267,6 @@ Use this exact JSON structure:
                 st.write(result)
                 st.download_button("📥 Download Lore for Obsidian/Notion (.md)", result, "world_lore.md", "text/markdown", width="stretch")
 
-    # --- PILLAR 6: SKILL CHALLENGE ARCHITECT ---
     elif page == "🎲 Skill Challenge Architect":
         st.title("🎲 Skill Challenge Architect")
         st.write("Instantly generate cinematic skill challenges for chases, escapes, and hazards.")
@@ -297,36 +284,70 @@ Use this exact JSON structure:
                 st.write(result)
                 st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
-    # --- PILLAR 7: CAMPAIGN ANALYST ---
+    # ==========================================
+    # --- UPDATED: CAMPAIGN ANALYST & WIKI ---
+    # ==========================================
     elif page == "🧠 Campaign Analyst":
-        st.title("🧠 Campaign Analyst")
-        st.write("Paste your previous session summaries here. The AI will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
+        st.title("🧠 Campaign Analyst & Wiki")
         
-        past_sessions = st.text_area(
-            "Past Session Notes/Summaries", 
-            height=300, 
-            placeholder="Paste the text from your previous sessions here..."
-        )
+        # We split this page into two tabs!
+        tab_analyst, tab_wiki = st.tabs(["📝 Past Session Analyzer", "📚 Campaign Wiki (RAG)"])
         
-        if st.button("Analyze Campaign", type="primary"):
-            if not past_sessions:
-                st.warning("⚠️ Please paste some session notes to analyze!")
-            else:
-                with st.spinner("Analyzing campaign data..."):
-                    prompt = f"""Act as an expert D&D Campaign Manager and Narrative Analyst.
-                    Analyze the following past session summaries:
-                    {past_sessions}
+        # --- TAB 1: Your original Session Analyzer ---
+        with tab_analyst:
+            st.write("Paste your previous session summaries here. The AI will analyze your campaign, find forgotten plot threads, and predict what you should prep next.")
+            past_sessions = st.text_area(
+                "Past Session Notes/Summaries", 
+                height=300, 
+                placeholder="Paste the text from your previous sessions here..."
+            )
+            
+            if st.button("Analyze Campaign", type="primary"):
+                if not past_sessions:
+                    st.warning("⚠️ Please paste some session notes to analyze!")
+                else:
+                    with st.spinner("Analyzing campaign data..."):
+                        prompt = f"""Act as an expert D&D Campaign Manager and Narrative Analyst.
+                        Analyze the following past session summaries:
+                        {past_sessions}
+                        Provide a detailed report structured EXACTLY with these 3 Markdown headers:
+                        ### 🧵 Unresolved Plot Threads
+                        ### 🧠 Player Psychology
+                        ### 🔮 Next Session Prep Recommendations"""
+                        result = get_ai_response(prompt)
+                        st.success("🧠 **Campaign Analysis Complete:**")
+                        st.write(result)
+                        st.download_button("📥 Download Analysis (.md)", result, "campaign_analysis.md", "text/markdown", width="stretch")
+        
+        # --- TAB 2: The New PDF Uploader and Chunker! ---
+        with tab_wiki:
+            st.write("Upload a massive lore PDF, and the app will chop it into manageable data chunks for the AI to read.")
+            
+            # 1. The Uploader Widget
+            uploaded_pdf = st.file_uploader("Upload Campaign Lore (PDF)", type="pdf")
+            
+            if uploaded_pdf is not None:
+                st.success(f"✅ Loaded: {uploaded_pdf.name}")
+                
+                # 2. Extract Text Function
+                with st.spinner("Extracting text from PDF..."):
+                    pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
+                    raw_text = ""
+                    for page in pdf_reader.pages:
+                        raw_text += page.extract_text() + "\n"
+                        
+                st.info(f"📄 Total characters extracted: {len(raw_text)}")
+                
+                # 3. The Chunker Function
+                with st.spinner("Chopping text into chunks..."):
+                    words = raw_text.split()
+                    chunk_size = 500
+                    # This slices the massive list of words into sub-lists of 500 words each
+                    chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
                     
-                    Provide a detailed report structured EXACTLY with these 3 Markdown headers:
-                    ### 🧵 Unresolved Plot Threads
-                    (Identify 2-3 dangling plot hooks or forgotten NPCs the DM can bring back)
-                    
-                    ### 🧠 Player Psychology
-                    (Analyze what types of encounters or gameplay the players seem to enjoy most based on these notes)
-                    
-                    ### 🔮 Next Session Prep Recommendations
-                    (Provide 2 specific, actionable ideas for what the DM should prep for the very next session)"""
-                    result = get_ai_response(prompt)
-                    st.success("🧠 **Campaign Analysis Complete:**")
-                    st.write(result)
-                    st.download_button(label="📥 Download Analysis (.md)", data=result, file_name="campaign_analysis.md", mime="text/markdown", width="stretch")
+                st.success(f"🔪 Successfully chopped into {len(chunks)} searchable chunks!")
+                
+                # Quick verification UI so you can see it working
+                with st.expander("👀 View Chunk #1"):
+                    if len(chunks) > 0:
+                        st.write(chunks[0])
