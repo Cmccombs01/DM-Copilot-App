@@ -3,7 +3,6 @@ import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import json 
 import PyPDF2 
-# We ripped out chromadb and added our lightweight math libraries!
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -11,8 +10,13 @@ import numpy as np
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
 
-# --- ANALYTICS SETUP ---
-ANALYTICS_PASSWORD = st.secrets["analytics_password"]
+# --- ANALYTICS SETUP (BULLETPROOF FIX) ---
+try:
+    # It will try to look for your cloud password first
+    ANALYTICS_PASSWORD = st.secrets["analytics_password"]
+except:
+    # If it is running locally and can't find the file, it uses this backup instead of crashing!
+    ANALYTICS_PASSWORD = "local_test_password"
 
 with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
 
