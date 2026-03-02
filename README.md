@@ -13,23 +13,7 @@ Tabletop Game Masters frequently experience burnout due to the heavy administrat
 - **AI Engine:** Groq API (Meta Llama 3.1)
 - **Logic:** Python, File I/O (Exporting), & SQL-inspired matching algorithms
 
-## 🚀 Core Features (v3.0)
-- **🤝 Campaign Matchmaker:** Uses custom Python logic to filter players based on schedule/timezone constraints, then leverages *Llama 3.1* to analyze unstructured text bios to generate a "Compatibility Score" and campaign hook.
-- **⚔️ Encounter Architect & Active Combat Tracker:** Replaces manual book-searching by using *Pandas* to load, filter, and display a dataset of 400+ official 5.5e monsters based on dynamic CR sliders. *New in v3.0:* Features a live, editable data grid allowing DMs to track monster HP dynamically during a session!
-- **📜 Session Scribe:** An AI workflow automator that takes chaotic, unstructured session notes and uses prompt engineering to instantly generate a cohesive narrative journal entry. Includes 1-click Markdown exporting for Notion/Obsidian.
-- **🎭 Quick Improv Tools:** Micro-AI generators designed to solve immediate game-design problems. Includes the *"Oh Crap" NPC Generator* and the *"Loot Anxiety" Curer*, which generates highly flavorful, mechanically balanced magic items.
-- **🌍 Worldbuilder's Forge:** Instantly generate rich, immersive lore and plot hooks for your campaign world using Llama 3.1. Choose your location type and theme, and the AI will forge visual descriptions, historical events, and secret quest hooks with direct-to-Markdown exporting.
-- ## 🗺️ Future Roadmap
-
-* **🔌 Local LLM Support (Ollama / LM Studio)** — *(Status: Actively Building)* Privacy is paramount. Adding a sidebar toggle to bypass cloud APIs entirely, letting you point the generation engine at local, offline models running on your own hardware.
-* **🎙️ Live Session Transcription (Whisper API)** — *(Status: Planned)*
-    Instead of typing raw notes, DMs will be able to upload audio recordings of the session. The app will use Whisper to transcribe the audio and pass it directly to Llama 3.1 for summarization.
-* **🎲 VTT Export Integration (Foundry / Roll20)** — *(Status: Planned)*
-    Expanding the current Markdown exports to generate VTT-ready JSON files for homebrew monsters, NPCs, and magic items.
-* **📚 RAG-Powered Campaign Wiki** — *(Status: Planned)*
-    Allowing DMs to upload their massive 50-page campaign lore PDFs so the "Campaign Analyst" can read the whole document and answer hyper-specific lore questions.
-* **🐉 Expanded Pandas DataFrames** — *(Status: Planned)*
-    Expanding the Encounter Architect's active data-grid filtering to include lookup tables for spells and magic items.
+Added a new tab to the Session Scribe page featuring an audio file uploader. Implemented logic to send audio bytes to the whisper-large-v3 model for transcription, then pass the output to Llama 3.1 for narrative summarization.
 
 ## 💻 How to Run Locally
 1. Clone this repository to your local machine.
