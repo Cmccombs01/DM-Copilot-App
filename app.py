@@ -80,7 +80,7 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     local_model = st.sidebar.selectbox("Active Model", ["llama3.1", "llama3"]) if llm_provider == "💻 Ollama (Local)" else ""
 
     st.sidebar.markdown("---")
-    page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "🎭 Improv Tools", "📜 Scribe's Handouts", "🧠 Assistant"])
+    page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "🎭 Improv Tools", "📜 Scribe's Handouts", "🌍 Worldbuilder", "🧠 Assistant"])
 
     st.sidebar.download_button(
         label="📥 Export Session Log",
@@ -104,7 +104,7 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
             return res
         except Exception as e:
-            return f"Error connecting to engine: {str(e)}"
+            return f"Error: {str(e)}"
 
     # --- PAGES ---
     if page == "🤝 Matchmaker":
@@ -121,18 +121,36 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         h_name = st.text_input("Monster Name")
         if st.button("Generate Pro Stat Block"):
             res = get_ai_response(f"Generate a 5e stat block for {h_name}")
-            clean_res = res.replace('\n', '<br>')
-            st.markdown(f"<div class='stat-card'>{clean_res}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
 
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
         st.markdown("<div class='ornate-divider'></div>", unsafe_allow_html=True)
         h_type = st.selectbox("Type", ["Bounty Poster", "King's Decree", "Torn Letter"])
-        msg = st.text_input("The Secret Message")
+        msg = st.text_input("Secret Message")
         if st.button("Forge Document"):
             res = get_ai_response(f"Write a {h_type} containing: {msg}")
-            clean_res = res.replace('\n', '<br>')
-            st.markdown(f"<div class='stat-card' style='font-style: italic; border-left: 8px solid #d4af37;'>{clean_res}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='stat-card' style='font-style: italic; border-left: 8px solid #d4af37;'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+
+    elif page == "🌍 Worldbuilder":
+        st.title("🌍 Worldbuilder's Forge")
+        st.markdown("<div class='ornate-divider'></div>", unsafe_allow_html=True)
+        w_type = st.selectbox("I need a...", ["City", "Faction", "Deity", "Historical Event"])
+        if st.button("Forge Lore"):
+            res = get_ai_response(f"Generate deep lore for a D&D {w_type}.")
+            st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+
+    elif page == "🧠 Assistant":
+        st.title("🧠 Digital DM Assistant")
+        st.markdown("<div class='ornate-divider'></div>", unsafe_allow_html=True)
+        notes = st.text_area("Paste Session Notes", height=200)
+        c1, c2 = st.columns(2)
+        if c1.button("🔍 Find Plot Holes"):
+            res = get_ai_response(f"Find plot holes in: {notes}")
+            st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+        if c2.button("✨ Suggest Twists"):
+            res = get_ai_response(f"Suggest 3 twists for: {notes}")
+            st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
 
     elif page == "🎭 Improv Tools":
         st.title("🎭 Improv Tools")
