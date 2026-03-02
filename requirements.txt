@@ -3,4 +3,5 @@ groq
 streamlit-analytics2
 ollama
 PyPDF2
-chromadb
+scikit-learn
+numpy
