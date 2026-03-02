@@ -1,22 +1,22 @@
-# 🐉 DM Co-Pilot: AI-Powered Campaign Management Platform
-[🔴 Play with the Live App Here!](https://dm-copilot-app.streamlit.app/)
+# 🐉 DM Co-Pilot: Pro Edition
+### *AI-Powered Campaign Management & Workflow Automation*
 
-## 📌 The Business Problem
-Tabletop Game Masters frequently experience burnout due to the heavy administrative burden of running a campaign. Manually balancing game mechanics, filtering through hundreds of monster stats, managing player schedules, and writing weekly session summaries often takes 4+ hours of prep time per week.
+[🔴 **Launch the Live App**](https://dm-copilot-app.streamlit.app/)
 
-## 💡 The Solution
-*DM Co-Pilot* is a workflow automation web application designed to reduce prep time by 80%. It serves as an end-to-end campaign management platform that blends structured data filtering with generative AI to handle scheduling compatibility, mathematical game balancing, unstructured text summarization, and on-the-fly asset generation.
+## 📌 The Mission
+DM Co-Pilot was engineered to solve the "Dungeon Master Burnout" crisis. By automating the high-friction administrative tasks of TTRPG management—math-heavy encounter balancing, session logging, and asset generation—this tool allows Game Masters to focus entirely on storytelling.
 
-## 🛠️ Tech Stack
-- **Frontend:** Streamlit (Python)
-- **Data Processing & Visualization:** Pandas, Streamlit Native Charting
-- **AI Engine:** Groq API (Meta Llama 3.1)
-- **Logic:** Python, File I/O (Exporting), & SQL-inspired matching algorithms
+## 🚀 Key Features (Portfolio Highlights)
+- **🧠 Digital DM Assistant:** Uses RAG-inspired logic to analyze campaign notes for plot holes and suggest narrative twists.
+- **💾 Session Ledger & Export:** A persistent logging system that tracks every AI interaction, allowing DMs to download their entire session history as a `.txt` file for local storage.
+- **📜 Scribe’s Handout Forge:** Generates formatted, in-universe props (Bounty Posters, Royal Decrees) using custom CSS for player immersion.
+- **⚔️ Encounter Architect:** A mathematical engine that calculates CR and forges homebrew stat blocks on the fly.
+- **🎲 Integrated Dice Tray:** A sidebar-mounted RNG suite for seamless gameplay without leaving the application.
 
-Added a new tab to the Session Scribe page featuring an audio file uploader. Implemented logic to send audio bytes to the whisper-large-v3 model for transcription, then pass the output to Llama 3.1 for narrative summarization.
+## 🛠️ Technical Architecture
+- **Frontend:** Streamlit (Python) with custom CSS injection for "Parchment & Crimson" branding.
+- **AI Orchestration:** Dual-engine support for **Groq (Meta Llama 3.1)** for cloud speed and **Ollama** for local privacy.
+- **Data Layer:** Pandas for monster/spell library management and Session State for real-time logging.
 
-## 💻 How to Run Locally
-1. Clone this repository to your local machine.
-2. Ensure you have the required libraries installed: `pip install streamlit pandas groq`
-3. Run the application via terminal: `streamlit run app.py`
-4. Enter your personal Groq API key securely into the sidebar to unlock AI features!
+## 📈 Impact & Analytics
+This project is built with user-retention in mind, featuring integrated **Streamlit Analytics** to track feature engagement and user flow, ensuring the tool evolves based on actual DM needs.
