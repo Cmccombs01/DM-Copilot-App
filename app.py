@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import json 
 import PyPDF2 
-import chromadb # <-- Added our vector database!
+import chromadb 
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -339,25 +339,57 @@ Use this exact JSON structure:
                     
                 st.success(f"🔪 Successfully chopped into {len(chunks)} searchable chunks!")
                 
-                # --- NEW CHROMA DB LOGIC ---
+                # --- CHROMA DB LOGIC ---
                 if len(chunks) > 0:
                     with st.spinner("🧠 Converting chunks into mathematical embeddings (this may take a moment)..."):
-                        # Initialize ChromaDB in memory
                         chroma_client = chromadb.Client()
-                        
-                        # Create a clean slate collection (database table)
                         try:
                             chroma_client.delete_collection(name="campaign_lore")
                         except:
                             pass
-                        
                         collection = chroma_client.create_collection(name="campaign_lore")
-                        
-                        # Feed the chunks into the database with unique IDs
                         ids = [f"chunk_{i}" for i in range(len(chunks))]
-                        collection.add(
-                            documents=chunks,
-                            ids=ids
-                        )
+                        collection.add(documents=chunks, ids=ids)
                     
                     st.success("✅ AI Memory successfully built! The document is ready to be searched.")
+                    
+                    # --- NEW CHAT INTERFACE LOGIC ---
+                    st.markdown("---")
+                    st.subheader("💬 Chat with your Lore")
+                    
+                    user_question = st.chat_input("Ask a question about the uploaded document...")
+                    
+                    if user_question:
+                        # 1. Display the user's question on the screen
+                        with st.chat_message("user"):
+                            st.write(user_question)
+                            
+                        with st.spinner("Searching the archives..."):
+                            # 2. Query ChromaDB for the 3 most relevant chunks
+                            results = collection.query(
+                                query_texts=[user_question],
+                                n_results=3
+                            )
+                            
+                            # 3. Combine those chunks into one context string
+                            retrieved_context = "\n\n".join(results["documents"][0])
+                            
+                            # 4. Inject the context into the strict RAG Prompt
+                            rag_prompt = f"""Act as the Dungeon Master's assistant. Use ONLY the following context to answer the question. If the answer is not in the context, say "I cannot find this in the uploaded lore."
+                            
+                            CONTEXT:
+                            {retrieved_context}
+                            
+                            QUESTION:
+                            {user_question}"""
+                            
+                            # 5. Send it to your Groq/Ollama routing function!
+                            answer = get_ai_response(rag_prompt)
+                            
+                            # 6. Print the AI's final answer
+                            with st.chat_message("assistant"):
+                                st.write(answer)
+                                
+                                # Bonus: Let the user see exactly which chunks the AI used to cheat!
+                                with st.expander("👀 View Retrieved Context"):
+                                    st.write(retrieved_context)
