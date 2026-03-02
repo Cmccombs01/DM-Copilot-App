@@ -3,9 +3,23 @@ import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import random
 from datetime import datetime
+import streamlit.components.v1 as components
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
+
+# --- GOOGLE ANALYTICS ---
+ga_tracking_code = """
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-S2FGGW3YMH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-S2FGGW3YMH');
+</script>
+"""
+components.html(ga_tracking_code, width=0, height=0)
 
 # --- 🏰 THEMED UI & ACCESSIBILITY ---
 st.markdown("""
