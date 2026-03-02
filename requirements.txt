@@ -2,3 +2,5 @@ pandas
 groq
 streamlit-analytics2
 ollama
+PyPDF2
+chromadb
