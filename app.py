@@ -22,7 +22,17 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         except FileNotFoundError:
             return None
 
+    @st.cache_data
+    def load_spell_data():
+        try:
+            # We are telling pandas to look for a spells database!
+            df = pd.read_csv("spells.csv")
+            return df
+        except FileNotFoundError:
+            return None
+
     monster_df = load_monster_data()
+    spell_df = load_spell_data()
 
     # --- SIDEBAR NAVIGATION ---
     st.sidebar.title("🐉 DM Co-Pilot")
@@ -142,7 +152,9 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
         st.write("Math-free combat balancing and active encounter tracking.")
-        tab1, tab2 = st.tabs(["🐉 Official 5.5e Monsters", "🛠️ Homebrew CR Calculator"])
+        
+        # --- NEW TAB ADDED HERE ---
+        tab1, tab2, tab3 = st.tabs(["🐉 Official 5.5e Monsters", "🛠️ Homebrew CR Calculator", "✨ Spell Grimoire"])
         
         with tab1:
             st.subheader("Active Combat Tracker")
@@ -166,6 +178,23 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             if st.button("Calculate Estimated CR"):
                 final_cr = max(0, round(((homebrew_hp / 15) + ((homebrew_ac - 13) / 2) + (homebrew_dpr / 5)) / 2))
                 st.success(f"⚔️ **Estimated Challenge Rating: CR {final_cr}**")
+                
+        # --- NEW SPELL GRIMOIRE LOGIC ---
+        with tab3:
+            st.subheader("Interactive Spell Grimoire")
+            if spell_df is not None:
+                st.write("Filter and search through the arcane archives.")
+                
+                # Check if there is a 'Level' column to filter by
+                if 'Level' in spell_df.columns:
+                    min_lvl, max_lvl = st.slider("Select Spell Level Range", 0, 9, (0, 3))
+                    filtered_spells = spell_df[(spell_df['Level'] >= min_lvl) & (spell_df['Level'] <= max_lvl)]
+                else:
+                    filtered_spells = spell_df
+                    
+                st.dataframe(filtered_spells, width="stretch", hide_index=True)
+            else:
+                st.info("⚠️ `spells.csv` not found! To use this feature, upload a CSV file named 'spells.csv' to your GitHub repository with columns like 'Name', 'Level', and 'Description'.")
 
     elif page == "📜 Session Scribe":
         st.title("📜 Session Scribe")
@@ -360,21 +389,17 @@ Use this exact JSON structure:
                     user_question = st.chat_input("Ask a question about the uploaded document...")
                     
                     if user_question:
-                        # 1. Display the user's question on the screen
                         with st.chat_message("user"):
                             st.write(user_question)
                             
                         with st.spinner("Searching the archives..."):
-                            # 2. Query ChromaDB for the 3 most relevant chunks
                             results = collection.query(
                                 query_texts=[user_question],
                                 n_results=3
                             )
                             
-                            # 3. Combine those chunks into one context string
                             retrieved_context = "\n\n".join(results["documents"][0])
                             
-                            # 4. Inject the context into the strict RAG Prompt
                             rag_prompt = f"""Act as the Dungeon Master's assistant. Use ONLY the following context to answer the question. If the answer is not in the context, say "I cannot find this in the uploaded lore."
                             
                             CONTEXT:
@@ -383,13 +408,10 @@ Use this exact JSON structure:
                             QUESTION:
                             {user_question}"""
                             
-                            # 5. Send it to your Groq/Ollama routing function!
                             answer = get_ai_response(rag_prompt)
                             
-                            # 6. Print the AI's final answer
                             with st.chat_message("assistant"):
                                 st.write(answer)
                                 
-                                # Bonus: Let the user see exactly which chunks the AI used to cheat!
                                 with st.expander("👀 View Retrieved Context"):
                                     st.write(retrieved_context)
