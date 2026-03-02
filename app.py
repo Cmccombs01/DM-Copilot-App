@@ -25,7 +25,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     @st.cache_data
     def load_spell_data():
         try:
-            # We are telling pandas to look for a spells database!
             df = pd.read_csv("spells.csv")
             return df
         except FileNotFoundError:
@@ -153,7 +152,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
         st.title("⚔️ Encounter Architect")
         st.write("Math-free combat balancing and active encounter tracking.")
         
-        # --- NEW TAB ADDED HERE ---
         tab1, tab2, tab3 = st.tabs(["🐉 Official 5.5e Monsters", "🛠️ Homebrew CR Calculator", "✨ Spell Grimoire"])
         
         with tab1:
@@ -179,35 +177,77 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                 final_cr = max(0, round(((homebrew_hp / 15) + ((homebrew_ac - 13) / 2) + (homebrew_dpr / 5)) / 2))
                 st.success(f"⚔️ **Estimated Challenge Rating: CR {final_cr}**")
                 
-        # --- NEW SPELL GRIMOIRE LOGIC ---
         with tab3:
             st.subheader("Interactive Spell Grimoire")
             if spell_df is not None:
                 st.write("Filter and search through the arcane archives.")
-                
-                # Check if there is a 'Level' column to filter by
                 if 'Level' in spell_df.columns:
                     min_lvl, max_lvl = st.slider("Select Spell Level Range", 0, 9, (0, 3))
                     filtered_spells = spell_df[(spell_df['Level'] >= min_lvl) & (spell_df['Level'] <= max_lvl)]
                 else:
                     filtered_spells = spell_df
-                    
                 st.dataframe(filtered_spells, width="stretch", hide_index=True)
             else:
                 st.info("⚠️ `spells.csv` not found! To use this feature, upload a CSV file named 'spells.csv' to your GitHub repository with columns like 'Name', 'Level', and 'Description'.")
 
+    # ==========================================
+    # --- UPDATED: SESSION SCRIBE WITH AUDIO ---
+    # ==========================================
     elif page == "📜 Session Scribe":
         st.title("📜 Session Scribe")
-        st.write("Paste raw bullet points below, and the AI will rewrite them into a narrative summary.")
-        raw_notes = st.text_area("Session Notes", height=200)
-        if st.button("Generate Epic Summary", type="primary"):
-            if raw_notes:
-                with st.spinner("Weaving notes into a story..."):
-                    prompt = f"Turn these D&D session notes into a dramatic 3-paragraph journal entry: {raw_notes}"
-                    result = get_ai_response(prompt)
-                    st.write(result)
-                    st.download_button("📥 Download for Notion/Obsidian (.md)", result, "session_summary.md", "text/markdown", width="stretch")
-            else: st.warning("Please enter notes to summarize.")
+        st.write("Generate an epic narrative summary of your last session from raw text or audio.")
+        
+        tab_text, tab_audio = st.tabs(["📝 Text Notes", "🎙️ Live Audio Transcription"])
+        
+        with tab_text:
+            raw_notes = st.text_area("Paste Raw Session Notes", height=200)
+            if st.button("Generate Epic Summary", type="primary"):
+                if raw_notes:
+                    with st.spinner("Weaving notes into a story..."):
+                        prompt = f"Turn these D&D session notes into a dramatic 3-paragraph journal entry: {raw_notes}"
+                        result = get_ai_response(prompt)
+                        st.write(result)
+                        st.download_button("📥 Download for Notion/Obsidian (.md)", result, "session_summary.md", "text/markdown", width="stretch")
+                else: 
+                    st.warning("Please enter notes to summarize.")
+                    
+        with tab_audio:
+            st.info("Upload a voice memo recap of your session. The AI will transcribe it and turn it into a journal entry!")
+            audio_file = st.file_uploader("Upload Audio (.mp3, .wav, .m4a)", type=["mp3", "wav", "m4a"])
+            
+            if st.button("Transcribe & Summarize", type="primary"):
+                if llm_provider == "💻 Ollama (Local)":
+                    st.error("⚠️ Audio transcription currently requires the Groq Cloud API. Please switch providers in the sidebar to use this feature.")
+                elif not groq_api_key:
+                    st.warning("⚠️ Please enter your Groq API key in the sidebar.")
+                elif audio_file:
+                    with st.spinner("🎙️ Transcribing audio with Whisper (this might take a minute)..."):
+                        try:
+                            from groq import Groq
+                            client = Groq(api_key=groq_api_key)
+                            
+                            # Send audio to Groq's Whisper model
+                            transcription = client.audio.transcriptions.create(
+                                file=(audio_file.name, audio_file.getvalue()),
+                                model="whisper-large-v3"
+                            )
+                            transcript_text = transcription.text
+                            st.success("✅ Transcription complete! Now weaving into a story...")
+                            
+                            with st.expander("👀 View Raw Transcript"):
+                                st.write(transcript_text)
+                            
+                            # Summarize the newly transcribed text
+                            with st.spinner("Weaving transcript into a story..."):
+                                prompt = f"Turn these transcribed D&D session notes into a dramatic 3-paragraph journal entry: {transcript_text}"
+                                result = get_ai_response(prompt)
+                                st.write(result)
+                                st.download_button("📥 Download Summary (.md)", result, "audio_summary.md", "text/markdown", width="stretch")
+                                
+                        except Exception as e:
+                            st.error(f"Error during audio transcription: {e}")
+                else:
+                    st.warning("Please upload an audio file.")
 
     elif page == "🎭 Quick Improv Tools":
         st.title("🎭 Quick Improv Tools")
