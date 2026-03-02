@@ -259,6 +259,32 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
     elif page == "🎭 Quick Improv Tools":
         st.title("🎭 Quick Improv Tools")
         st.write("For when your players completely ignore your prepared notes.")
+
+        # --- NEW INITIATIVE TRACKER ---
+        with st.expander("⚔️ The Initiative Tracker"):
+            st.write("Add your players and monsters to sort the turn order instantly.")
+            
+            if 'initiative_list' not in st.session_state:
+                st.session_state.initiative_list = []
+                
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                char_name = st.text_input("Character/Monster Name", key="init_name")
+            with col2:
+                init_roll = st.number_input("Initiative Roll", min_value=-5, max_value=50, value=10, key="init_roll")
+            with col3:
+                st.write("") # Spacing to align button
+                if st.button("Add to Order", use_container_width=True):
+                    if char_name:
+                        st.session_state.initiative_list.append({"Name": char_name, "Initiative": init_roll})
+                        st.session_state.initiative_list = sorted(st.session_state.initiative_list, key=lambda x: x["Initiative"], reverse=True)
+                        st.rerun()
+                        
+            if st.session_state.initiative_list:
+                st.dataframe(pd.DataFrame(st.session_state.initiative_list), use_container_width=True, hide_index=True)
+                if st.button("End Combat (Clear Tracker)"):
+                    st.session_state.initiative_list = []
+                    st.rerun()
         
         with st.expander("🧙‍♂️ The 'Oh Crap' NPC Generator"):
             npc_prompt = st.text_input("Who did the party just talk to?", "A suspicious tavern keeper with a limp")
@@ -313,12 +339,21 @@ Use this exact JSON structure:
                         st.error("⚠️ The AI failed to format the item correctly. Please click Forge again!")
                         st.code(raw_result) 
 
-        with st.expander("🍻 The Tavern Generator"):
-            tavern_wealth = st.selectbox("Tavern Wealth Level", ["Grimey Slum", "Working Class", "Adventurer's Hub", "High-Society District"])
+        # --- UPGRADED TAVERN GENERATOR ---
+        with st.expander("🍻 The 1-Click Tavern Generator"):
+            tavern_vibe = st.selectbox("Tavern Wealth/Vibe", ["Squalid & Shady", "Cozy & Rustic", "High-Class & Expensive", "Magical & Strange"])
             if st.button("Generate Tavern"):
-                with st.spinner("Pouring drinks..."):
-                    prompt = f"Create a D&D tavern in a {tavern_wealth} area. Provide: 1. Tavern Name. 2. Barkeep's name/personality. 3. Signature Drink/Dish. 4. One juicy local rumor."
-                    result = get_ai_response(prompt)
+                with st.spinner("Pouring the ale and lighting the hearth..."):
+                    tavern_prompt = f"""
+                    You are an expert D&D Dungeon Master. Generate a {tavern_vibe} tavern for my players.
+                    Format the output strictly with these bold headings:
+                    **Tavern Name:** **The Vibe:** (2 sentences describing the atmosphere, smells, and sounds)
+                    **The Innkeeper:** (Name, race, and one weird quirky trait)
+                    **Signature Drink:** (Name of the drink, cost, and what it tastes/looks like)
+                    **Current Rumor:** (One juicy plot hook being whispered at a table)
+                    """
+                    result = get_ai_response(tavern_prompt)
+                    st.success("Tavern Generated!")
                     st.write(result)
                     st.download_button("💾 Download Tavern Notes", result, "Tavern_Notes.md", "text/markdown", width="stretch")
                     
