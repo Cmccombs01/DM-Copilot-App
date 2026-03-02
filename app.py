@@ -3,7 +3,10 @@ import pandas as pd
 import streamlit_analytics2 as streamlit_analytics
 import json 
 import PyPDF2 
-import chromadb 
+# We ripped out chromadb and added our lightweight math libraries!
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot", page_icon="🐉", layout="wide")
@@ -190,9 +193,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
             else:
                 st.info("⚠️ `spells.csv` not found! To use this feature, upload a CSV file named 'spells.csv' to your GitHub repository with columns like 'Name', 'Level', and 'Description'.")
 
-    # ==========================================
-    # --- UPDATED: SESSION SCRIBE WITH AUDIO ---
-    # ==========================================
     elif page == "📜 Session Scribe":
         st.title("📜 Session Scribe")
         st.write("Generate an epic narrative summary of your last session from raw text or audio.")
@@ -226,7 +226,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                             from groq import Groq
                             client = Groq(api_key=groq_api_key)
                             
-                            # Send audio to Groq's Whisper model
                             transcription = client.audio.transcriptions.create(
                                 file=(audio_file.name, audio_file.getvalue()),
                                 model="whisper-large-v3"
@@ -237,7 +236,6 @@ with streamlit_analytics.track(unsafe_password=ANALYTICS_PASSWORD):
                             with st.expander("👀 View Raw Transcript"):
                                 st.write(transcript_text)
                             
-                            # Summarize the newly transcribed text
                             with st.spinner("Weaving transcript into a story..."):
                                 prompt = f"Turn these transcribed D&D session notes into a dramatic 3-paragraph journal entry: {transcript_text}"
                                 result = get_ai_response(prompt)
@@ -355,7 +353,7 @@ Use this exact JSON structure:
                 st.download_button(label="📥 Download Challenge (.md)", data=result, file_name="skill_challenge.md", mime="text/markdown", width="stretch")
 
     # ==========================================
-    # --- CAMPAIGN ANALYST & WIKI ---
+    # --- CAMPAIGN ANALYST & WIKI (SCIKIT-LEARN FIX) ---
     # ==========================================
     elif page == "🧠 Campaign Analyst":
         st.title("🧠 Campaign Analyst & Wiki")
@@ -408,21 +406,14 @@ Use this exact JSON structure:
                     
                 st.success(f"🔪 Successfully chopped into {len(chunks)} searchable chunks!")
                 
-                # --- CHROMA DB LOGIC ---
+                # --- NEW SCIKIT-LEARN RAG LOGIC ---
                 if len(chunks) > 0:
-                    with st.spinner("🧠 Converting chunks into mathematical embeddings (this may take a moment)..."):
-                        chroma_client = chromadb.Client()
-                        try:
-                            chroma_client.delete_collection(name="campaign_lore")
-                        except:
-                            pass
-                        collection = chroma_client.create_collection(name="campaign_lore")
-                        ids = [f"chunk_{i}" for i in range(len(chunks))]
-                        collection.add(documents=chunks, ids=ids)
+                    with st.spinner("🧠 Converting chunks into mathematical vectors (this takes just a second)..."):
+                        vectorizer = TfidfVectorizer()
+                        tfidf_matrix = vectorizer.fit_transform(chunks)
                     
                     st.success("✅ AI Memory successfully built! The document is ready to be searched.")
                     
-                    # --- NEW CHAT INTERFACE LOGIC ---
                     st.markdown("---")
                     st.subheader("💬 Chat with your Lore")
                     
@@ -433,12 +424,15 @@ Use this exact JSON structure:
                             st.write(user_question)
                             
                         with st.spinner("Searching the archives..."):
-                            results = collection.query(
-                                query_texts=[user_question],
-                                n_results=3
-                            )
+                            # Transform the question and calculate similarity
+                            question_vec = vectorizer.transform([user_question])
+                            similarities = cosine_similarity(question_vec, tfidf_matrix).flatten()
                             
-                            retrieved_context = "\n\n".join(results["documents"][0])
+                            # Get the top 3 most similar chunks
+                            top_3_indices = similarities.argsort()[-3:][::-1]
+                            top_chunks = [chunks[i] for i in top_3_indices]
+                            
+                            retrieved_context = "\n\n".join(top_chunks)
                             
                             rag_prompt = f"""Act as the Dungeon Master's assistant. Use ONLY the following context to answer the question. If the answer is not in the context, say "I cannot find this in the uploaded lore."
                             
