@@ -68,12 +68,20 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    .stButton>button {
+    /* BUTTON FIXES */
+    .stButton>button, .stFormSubmitButton>button {
         background-color: #b22222 !important;
         color: #ffffff !important;
         border: 1px solid #d4af37 !important;
         font-family: 'MedievalSharp', cursive;
         font-size: 1.1rem !important;
+        transition: background-color 0.3s ease;
+    }
+    
+    .stButton>button:hover, .stFormSubmitButton>button:hover {
+        background-color: #800000 !important;
+        border: 1px solid #ffffff !important;
+        color: #ffffff !important;
     }
 
     h1, h2, h3 {
@@ -111,7 +119,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
     st.sidebar.markdown("---")
-    # Updated Navigation
     page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "📜 Scribe's Handouts", "🌍 Worldbuilder", "🧠 Assistant", "📫 Give Feedback"])
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
@@ -140,9 +147,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
             return res
         except Exception as e: 
-            # Log the error secretly for you
             st.session_state.error_log.append(f"[{datetime.now()}] ERROR on prompt '{prompt}': {str(e)}")
-            # Give the user a friendly, non-technical message
             return "❌ The magic fizzled! The AI engine timed out or encountered an error. Please try again."
 
     # --- PAGE LOGIC ---
@@ -155,15 +160,12 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
-        
-        # New Expander Instructions
         with st.expander("📖 How to use the Encounter Architect"):
             st.markdown("""
             1. **Type a name:** Enter any creature name, real or homebrew (e.g., 'Lava Drake' or 'Goblin King').
             2. **Generate:** The AI will forge a balanced 5th Edition stat block.
             3. **Pro-Tip:** If you want specific traits, add them to the name like *'Lava Drake (with a breath weapon)'*.
             """)
-            
         h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake", help="Type any creature name here!")
         if st.button("Generate Stat Block"):
             res = get_ai_response(f"Generate a 5e stat block for {h_name}")
@@ -192,17 +194,50 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         if st.button("🔍 Analyze Plot"):
             st.markdown(f"<div class='stat-card'>{get_ai_response(f'Analyze plot twists: {notes}')}</div>", unsafe_allow_html=True)
 
-    # New Feedback Form Page
+    # New Feedback Form Page (With UX Fixes and Google Sheets)
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         st.write("Help me improve the DM Co-Pilot! What should I build next?")
         
+        # Establish Google Sheets Connection
+        from streamlit_gsheets import GSheetsConnection
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
         with st.form("user_feedback_form"):
-            user_rating = st.slider("How would you rate the app so far?", 1, 5, 5)
+            # Clickable Star Rating using a horizontal radio button
+            user_rating = st.radio("How would you rate the app so far?", 
+                                   ["⭐⭐⭐⭐⭐ (5 Stars)", "⭐⭐⭐⭐ (4 Stars)", "⭐⭐⭐ (3 Stars)", "⭐⭐ (2 Stars)", "⭐ (1 Star)"], 
+                                   horizontal=True)
+            
             user_vtt = st.selectbox("What Virtual Tabletop do you use?", ["Roll20", "Foundry", "Owlbear Rodeo", "Pen & Paper", "Other"])
             user_idea = st.text_area("What feature should I add next?", placeholder="e.g., Export to PDF, NPC Generator...")
             
             submitted = st.form_submit_button("Submit Feedback")
             
             if submitted:
-                st.success(f"Thank you! Your {user_rating}-star rating and feedback have been sent to the developer.")
+                # Extract just the number from the rating selection
+                numerical_rating = user_rating.split("(")[1][0] 
+                
+                # Push Data to Google Sheets
+                sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
+                existing_data = conn.read(spreadsheet=sheet_url, usecols=[0, 1, 2, 3])
+                
+                new_row = pd.DataFrame([{
+                    "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Rating": numerical_rating,
+                    "VTT": user_vtt,
+                    "Feature_Idea": user_idea
+                }])
+                
+                updated_data = pd.concat([existing_data, new_row], ignore_index=True)
+                conn.update(spreadsheet=sheet_url, data=updated_data)
+                
+                # Custom Navy Blue Success Message
+                st.markdown(f"""
+                <div style="background-color: #f0f4f8; border-left: 6px solid #000080; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <h3 style="color: #000080; margin: 0; font-family: 'Crimson Text', serif;">📬 Feedback Received!</h3>
+                    <p style="color: #000080; font-size: 1.1rem; margin-top: 5px; font-weight: bold;">
+                        Thank you! Your {numerical_rating}-star rating and feedback have been sent to the developer's ledger.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
