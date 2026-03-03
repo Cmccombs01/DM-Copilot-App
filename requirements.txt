@@ -5,3 +5,4 @@ ollama
 PyPDF2
 scikit-learn
 numpy
+st-gsheets-connection
