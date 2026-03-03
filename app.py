@@ -88,6 +88,8 @@ if 'session_log' not in st.session_state:
     st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
 if 'last_roll' not in st.session_state:
     st.session_state.last_roll = "Roll the dice!"
+if 'error_log' not in st.session_state:
+    st.session_state.error_log = []
 
 # --- ANALYTICS ---
 with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_password", "local_test_password")):
@@ -109,9 +111,20 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
     st.sidebar.markdown("---")
-    page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "📜 Scribe's Handouts", "🌍 Worldbuilder", "🧠 Assistant"])
+    # Updated Navigation
+    page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "📜 Scribe's Handouts", "🌍 Worldbuilder", "🧠 Assistant", "📫 Give Feedback"])
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
+
+    # Feature Roadmap Callout
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🗺️ Feature Roadmap")
+    st.sidebar.info("""
+    **Currently Building:**
+    * 📝 PDF Exports for Stat Blocks
+    * 📊 Google Sheets Feedback Integration
+    * 🐛 Advanced Error Logging
+    """)
 
     # --- AI HELPER ---
     def get_ai_response(prompt):
@@ -126,7 +139,11 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 res = ollama.chat(model="llama3.1", messages=[{"role": "user", "content": prompt}])['message']['content']
             st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
             return res
-        except Exception as e: return f"❌ Error: {str(e)}"
+        except Exception as e: 
+            # Log the error secretly for you
+            st.session_state.error_log.append(f"[{datetime.now()}] ERROR on prompt '{prompt}': {str(e)}")
+            # Give the user a friendly, non-technical message
+            return "❌ The magic fizzled! The AI engine timed out or encountered an error. Please try again."
 
     # --- PAGE LOGIC ---
     if page == "🤝 Matchmaker":
@@ -138,8 +155,16 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Simply type the name of any creature—real or homebrew. The AI will forge a complete 5th Edition stat block including HP, AC, Traits, and Actions.</div>""", unsafe_allow_html=True)
-        h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake")
+        
+        # New Expander Instructions
+        with st.expander("📖 How to use the Encounter Architect"):
+            st.markdown("""
+            1. **Type a name:** Enter any creature name, real or homebrew (e.g., 'Lava Drake' or 'Goblin King').
+            2. **Generate:** The AI will forge a balanced 5th Edition stat block.
+            3. **Pro-Tip:** If you want specific traits, add them to the name like *'Lava Drake (with a breath weapon)'*.
+            """)
+            
+        h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake", help="Type any creature name here!")
         if st.button("Generate Stat Block"):
             res = get_ai_response(f"Generate a 5e stat block for {h_name}")
             st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -166,3 +191,18 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         notes = st.text_area("Session Notes", placeholder="The party found the map, but killed the NPC who could read it...")
         if st.button("🔍 Analyze Plot"):
             st.markdown(f"<div class='stat-card'>{get_ai_response(f'Analyze plot twists: {notes}')}</div>", unsafe_allow_html=True)
+
+    # New Feedback Form Page
+    elif page == "📫 Give Feedback":
+        st.title("📫 Tavern Suggestion Box")
+        st.write("Help me improve the DM Co-Pilot! What should I build next?")
+        
+        with st.form("user_feedback_form"):
+            user_rating = st.slider("How would you rate the app so far?", 1, 5, 5)
+            user_vtt = st.selectbox("What Virtual Tabletop do you use?", ["Roll20", "Foundry", "Owlbear Rodeo", "Pen & Paper", "Other"])
+            user_idea = st.text_area("What feature should I add next?", placeholder="e.g., Export to PDF, NPC Generator...")
+            
+            submitted = st.form_submit_button("Submit Feedback")
+            
+            if submitted:
+                st.success(f"Thank you! Your {user_rating}-star rating and feedback have been sent to the developer.")
