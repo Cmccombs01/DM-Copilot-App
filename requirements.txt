@@ -3,4 +3,4 @@ pandas
 streamlit-analytics2
 groq
 fpdf
-streamlit-gsheets
+st-gsheets-connection
