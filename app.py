@@ -4,6 +4,18 @@ import streamlit_analytics2 as streamlit_analytics
 import random
 from datetime import datetime
 import streamlit.components.v1 as components
+import logging
+from fpdf import FPDF
+
+# --- 🐛 ADVANCED ERROR LOGGING SETUP ---
+# This will silently write all errors to a hidden file named 'app_errors.log'
+# keeping the console clean while giving you a permanent record of what went wrong.
+logging.basicConfig(
+    filename='app_errors.log',
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
@@ -123,11 +135,11 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # Feature Roadmap Callout
+    # Feature Roadmap Callout (UPDATED!)
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗺️ Feature Roadmap")
-    st.sidebar.info("""
-    **Currently Building:**
+    st.sidebar.success("""
+    **Recently Completed:**
     * 📝 PDF Exports for Stat Blocks
     * 📊 Google Sheets Feedback Integration
     * 🐛 Advanced Error Logging
@@ -147,7 +159,9 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
             return res
         except Exception as e: 
-            st.session_state.error_log.append(f"[{datetime.now()}] ERROR on prompt '{prompt}': {str(e)}")
+            error_msg = f"ERROR on prompt '{prompt}': {str(e)}"
+            st.session_state.error_log.append(f"[{datetime.now()}] {error_msg}")
+            logger.error(error_msg) # Permanently logs the error
             return "❌ The magic fizzled! The AI engine timed out or encountered an error. Please try again."
 
     # --- PAGE LOGIC ---
@@ -167,9 +181,35 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             3. **Pro-Tip:** If you want specific traits, add them to the name like *'Lava Drake (with a breath weapon)'*.
             """)
         h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake", help="Type any creature name here!")
+        
         if st.button("Generate Stat Block"):
-            res = get_ai_response(f"Generate a 5e stat block for {h_name}")
-            st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+            with st.spinner("Forging the monster..."):
+                res = get_ai_response(f"Generate a 5e stat block for {h_name}")
+                st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                
+                # --- 📝 PDF EXPORT LOGIC ---
+                if not res.startswith("❌"): # Only export if we didn't get an error
+                    try:
+                        pdf = FPDF()
+                        pdf.add_page()
+                        pdf.set_font("Arial", size=12)
+                        
+                        # Strip emojis/weird unicode so the basic PDF font doesn't crash
+                        clean_text = res.encode('latin-1', 'ignore').decode('latin-1')
+                        pdf.multi_cell(0, 10, txt=f"{h_name.upper()} - STAT BLOCK\n\n{clean_text}")
+                        
+                        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+                        
+                        st.download_button(
+                            label="📝 Download PDF Stat Block",
+                            data=pdf_bytes,
+                            file_name=f"{h_name.replace(' ', '_')}_statblock.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"Could not generate PDF: {e}")
+                        logger.error(f"PDF Generation Error: {e}")
 
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
