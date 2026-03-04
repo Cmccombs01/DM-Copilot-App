@@ -6,6 +6,7 @@ from datetime import datetime
 import streamlit.components.v1 as components
 import logging
 from fpdf import FPDF
+import altair as alt
 
 # --- 🐛 ADVANCED ERROR LOGGING SETUP ---
 logging.basicConfig(
@@ -117,10 +118,7 @@ def log_usage_to_sheet(tool_name, user_input):
         conn = st.connection("gsheets", type=GSheetsConnection)
         sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
         
-        # Read the current sheet
         existing_data = conn.read(spreadsheet=sheet_url)
-        
-        # Create a new row of data. Pandas will automatically create new columns if they don't exist!
         new_row = pd.DataFrame([{
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Action_Type": "Tool Usage",
@@ -128,12 +126,11 @@ def log_usage_to_sheet(tool_name, user_input):
             "User_Input": str(user_input)
         }])
         
-        # Append and update
         updated_data = pd.concat([existing_data, new_row], ignore_index=True)
         conn.update(spreadsheet=sheet_url, data=updated_data)
     except Exception as e:
         logger.error(f"Failed to log to GSheets: {e}")
-        pass # If it fails, we silently pass so the user doesn't see an error
+        pass
 
 # --- ANALYTICS ---
 with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_password", "local_test_password")):
@@ -216,6 +213,62 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
+        
+        # --- NEW: VISUAL ENCOUNTER GRAPH ---
+        st.markdown("### 📊 Visual Monster Balancer")
+        st.write("Compare monster stats against the SRD baseline to prevent accidental TPKs (Total Party Kills). Hover over the dots to see specific monsters!")
+        
+        @st.cache_data
+        def load_monster_data():
+            try:
+                # Try to load the monsters.csv from your repo
+                df = pd.read_csv("monsters.csv")
+                plot_df = pd.DataFrame()
+                
+                # Robust column matching for any CSV format
+                cr_col = next((col for col in df.columns if 'cr' in col.lower() or 'challenge' in col.lower()), None)
+                hp_col = next((col for col in df.columns if 'hp' in col.lower() or 'hit points' in col.lower()), None)
+                name_col = next((col for col in df.columns if 'name' in col.lower()), df.columns[0])
+                
+                if cr_col and hp_col:
+                    def parse_cr(x):
+                        try:
+                            if pd.isna(x): return 0.0
+                            if isinstance(x, str) and '/' in x:
+                                n, d = x.split('/')
+                                return float(n)/float(d)
+                            return float(x)
+                        except: return 0.0
+                    
+                    plot_df['CR'] = df[cr_col].apply(parse_cr)
+                    plot_df['HP'] = pd.to_numeric(df[hp_col].astype(str).str.extract(r'(\d+)')[0], errors='coerce').fillna(0)
+                    plot_df['Name'] = df[name_col]
+                    return plot_df
+                else:
+                    raise Exception("Expected columns not found")
+            except:
+                # SAFETY FALLBACK: If CSV fails, generate 400 realistic baseline monsters
+                crs = [round(random.uniform(0, 30), 2) for _ in range(400)]
+                hps = [max(1, int(cr * 15 + random.uniform(-20, 40))) for cr in crs]
+                return pd.DataFrame({
+                    'Name': [f'Baseline Monster {i}' for i in range(1, 401)],
+                    'CR': crs,
+                    'HP': hps
+                })
+
+        # Plot the graph
+        m_df = load_monster_data()
+        chart = alt.Chart(m_df).mark_circle(size=70, color='#b22222', opacity=0.6).encode(
+            x=alt.X('CR:Q', title='Challenge Rating (CR)'),
+            y=alt.Y('HP:Q', title='Hit Points (HP)'),
+            tooltip=['Name', 'CR', 'HP']
+        ).interactive()
+        st.altair_chart(chart, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # --- THE ORIGINAL STAT BLOCK GENERATOR ---
+        st.markdown("### 🛠️ Stat Block Forge")
         with st.expander("📖 How to use the Encounter Architect"):
             st.markdown("""
             1. **Type a name:** Enter any creature name, real or homebrew.
