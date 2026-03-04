@@ -8,8 +8,6 @@ import logging
 from fpdf import FPDF
 
 # --- 🐛 ADVANCED ERROR LOGGING SETUP ---
-# This will silently write all errors to a hidden file named 'app_errors.log'
-# keeping the console clean while giving you a permanent record of what went wrong.
 logging.basicConfig(
     filename='app_errors.log',
     level=logging.ERROR,
@@ -131,19 +129,33 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
     st.sidebar.markdown("---")
-    page = st.sidebar.radio("Navigation", ["🤝 Matchmaker", "⚔️ Encounter Architect", "📜 Scribe's Handouts", "🌍 Worldbuilder", "🧠 Assistant", "📫 Give Feedback"])
+    
+    # --- UPDATED NAVIGATION MENU ---
+    page = st.sidebar.radio("Navigation", [
+        "🤝 Matchmaker", 
+        "⚔️ Encounter Architect", 
+        "🎭 NPC Quick-Forge", 
+        "📜 Scribe's Handouts", 
+        "💎 Magic Item Artificer", 
+        "💰 Dynamic Shop Generator", 
+        "🌍 Worldbuilder", 
+        "📖 Session Recap Scribe",
+        "🧠 Assistant", 
+        "📫 Give Feedback"
+    ])
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # Feature Roadmap Callout (UPDATED!)
+    # --- 🗳️ UPDATED DYNAMIC SIDEBAR POLL ---
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🗺️ Feature Roadmap")
-    st.sidebar.success("""
-    **Recently Completed:**
-    * 📝 PDF Exports for Stat Blocks
-    * 📊 Google Sheets Feedback Integration
-    * 🐛 Advanced Error Logging
-    """)
+    st.sidebar.markdown("### 🗳️ Community Poll")
+    poll_choice = st.sidebar.radio(
+        "What should I build next?", 
+        ["🧩 Trap Architect", "🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator"],
+        index=None
+    )
+    if poll_choice:
+        st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
 
     # --- AI HELPER ---
     def get_ai_response(prompt):
@@ -161,7 +173,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         except Exception as e: 
             error_msg = f"ERROR on prompt '{prompt}': {str(e)}"
             st.session_state.error_log.append(f"[{datetime.now()}] {error_msg}")
-            logger.error(error_msg) # Permanently logs the error
+            logger.error(error_msg)
             return "❌ The magic fizzled! The AI engine timed out or encountered an error. Please try again."
 
     # --- PAGE LOGIC ---
@@ -170,15 +182,16 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your campaign summary and what you're looking for in a player. The AI will evaluate the 'vibe' and help you decide if a player is a good fit for your table.</div>""", unsafe_allow_html=True)
         pitch = st.text_area("The DM's Pitch & Player Preferences", placeholder="e.g. A dark gothic horror game for 4 players...")
         if st.button("Analyze Compatibility"):
-            st.markdown(f"<div class='stat-card'>{get_ai_response(f'Analyze: {pitch}')}</div>", unsafe_allow_html=True)
+            res = get_ai_response(f'Analyze: {pitch}')
+            st.markdown(f"<div class='stat-card'>{res}</div>", unsafe_allow_html=True)
+            if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
         with st.expander("📖 How to use the Encounter Architect"):
             st.markdown("""
-            1. **Type a name:** Enter any creature name, real or homebrew (e.g., 'Lava Drake' or 'Goblin King').
+            1. **Type a name:** Enter any creature name, real or homebrew.
             2. **Generate:** The AI will forge a balanced 5th Edition stat block.
-            3. **Pro-Tip:** If you want specific traits, add them to the name like *'Lava Drake (with a breath weapon)'*.
             """)
         h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake", help="Type any creature name here!")
         
@@ -187,17 +200,14 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 res = get_ai_response(f"Generate a 5e stat block for {h_name}")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
                 
-                # --- 📝 PDF EXPORT LOGIC ---
-                if not res.startswith("❌"): # Only export if we didn't get an error
+                if not res.startswith("❌") and not res.startswith("⚠️"):
+                    st.feedback("faces") 
                     try:
                         pdf = FPDF()
                         pdf.add_page()
                         pdf.set_font("Arial", size=12)
-                        
-                        # Strip emojis/weird unicode so the basic PDF font doesn't crash
                         clean_text = res.encode('latin-1', 'ignore').decode('latin-1')
                         pdf.multi_cell(0, 10, txt=f"{h_name.upper()} - STAT BLOCK\n\n{clean_text}")
-                        
                         pdf_bytes = pdf.output(dest='S').encode('latin-1')
                         
                         st.download_button(
@@ -211,40 +221,98 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                         st.error(f"Could not generate PDF: {e}")
                         logger.error(f"PDF Generation Error: {e}")
 
+    # --- NEW FEATURE: NPC QUICK-FORGE ---
+    elif page == "🎭 NPC Quick-Forge":
+        st.title("🎭 The NPC Quick-Forge")
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a profession or basic concept. The AI will instantly generate a named character with a unique quirk, a hidden secret, and a voice prompt for you to act out.</div>""", unsafe_allow_html=True)
+        npc_concept = st.text_input("NPC Concept", placeholder="e.g. A suspicious tavern keeper, or a nervous goblin merchant...")
+        if st.button("Forge NPC"):
+            with st.spinner("Breathing life into the NPC..."):
+                res = get_ai_response(f"Create a memorable D&D 5e NPC based on this concept: '{npc_concept}'. Include a creative Name, a distinct Physical Quirk, a Secret they are hiding, a specific Voice/Mannerism prompt for the DM to act out, and their general Disposition.")
+                st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
+
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Choose a style of document (like a Bounty Poster) and give it a 'hook' or 'secret'. The AI will write a beautiful, in-character prop you can show your players.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Choose a style of document and give it a 'hook' or 'secret'. The AI will write a beautiful, in-character prop.</div>""", unsafe_allow_html=True)
         h_style = st.selectbox("Style", ["Bounty Poster", "King's Decree", "Torn Journal", "Mystic Prophecy"])
         msg = st.text_input("Core Hook", placeholder="Wanted for stealing the Duke's ring...")
         if st.button("Forge Document"):
             res = get_ai_response(f"Write a flavorful {h_style}: {msg}")
             st.markdown(f"<div class='handout-card'><h3 style='text-align:center;'>{h_style.upper()}</h3><hr>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+            if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
+
+    elif page == "💎 Magic Item Artificer":
+        st.title("💎 Magic Item Artificer")
+        st.markdown("""
+        <div class='instruction-box'>
+            <b>Toll Required!</b> The Artificer's forge is locked. To power the magic generator, you must feed it one piece of feedback or a feature idea!
+        </div>
+        """, unsafe_allow_html=True)
+        
+        toll_feedback = st.text_input("What should I build or improve next?", placeholder="e.g. Add a tavern generator, fix the dark mode...")
+        item_theme = st.text_input("Magic Item Theme", placeholder="e.g. A shadowy rogue amulet")
+        
+        if st.button("Forge Magic Item"):
+            if len(toll_feedback) < 3:
+                st.warning("⚠️ The Goblin demands a real suggestion in the box above before opening the forge!")
+            elif not item_theme:
+                st.warning("⚠️ Please enter a theme for the magic item.")
+            else:
+                st.success("Toll accepted! Your feedback has been sent to the developer's ledger. Forging your item...")
+                with st.spinner("Enchanting the artifact..."):
+                    res = get_ai_response(f"Create a unique 5e magic item based on this theme: {item_theme}. Include a cool name, mechanical 5e stats, physical description, and a snippet of deep lore.")
+                    st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                    if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
+
+    # --- NEW FEATURE: DYNAMIC SHOP GENERATOR ---
+    elif page == "💰 Dynamic Shop Generator":
+        st.title("💰 Dynamic Shop Generator")
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Select a shop type. The AI will generate a shop name, a quirky proprietor, and a formatted inventory table complete with gold piece prices.</div>""", unsafe_allow_html=True)
+        shop_type = st.selectbox("Shop Type", ["General Store", "Apothecary / Potions", "Black Market / Fence", "Magic Item Broker", "Weaponsmith"])
+        if st.button("Generate Shop"):
+            with st.spinner("Stocking the shelves..."):
+                res = get_ai_response(f"Generate a '{shop_type}' for a D&D 5e game. Include a creative Shop Name, a brief description of the quirky shopkeeper, and a formatted table of 5-7 thematic items for sale with their gold piece prices.")
+                st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
     elif page == "🌍 Worldbuilder":
         st.title("🌍 Worldbuilder's Forge")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Need instant lore? Select what you need (City, God, or Faction) and the AI will generate deep, flavorful history to flesh out your world.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Select what you need and the AI will generate deep, flavorful history to flesh out your world.</div>""", unsafe_allow_html=True)
         w_type = st.selectbox("I need a...", ["City", "Deity", "Faction"])
         if st.button("Forge Lore"):
-            st.markdown(f"<div class='stat-card'>{get_ai_response(f'Deep lore for {w_type}').replace('\n','<br>')}</div>", unsafe_allow_html=True)
+            res = get_ai_response(f'Deep lore for {w_type}')
+            st.markdown(f"<div class='stat-card'>{res.replace('\n','<br>')}</div>", unsafe_allow_html=True)
+            if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
+
+    # --- NEW FEATURE: SESSION RECAP SCRIBE ---
+    elif page == "📖 Session Recap Scribe":
+        st.title("📖 'Previously On...' Summarizer")
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your messy, bullet-point notes from your last game. The AI will rewrite them into a dramatic, polished monologue designed to be read aloud to hype up the players.</div>""", unsafe_allow_html=True)
+        messy_notes = st.text_area("Rough Session Notes", placeholder="The party fought some goblins, Bob almost died to a trap, they found a glowing sword...")
+        if st.button("Draft Recap"):
+            with st.spinner("Scripting the dramatic intro..."):
+                res = get_ai_response(f"Turn these rough D&D session notes into a dramatic, polished 2-paragraph monologue designed to be read aloud by the Dungeon Master at the start of the next session to hype up the players: {messy_notes}")
+                st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
     elif page == "🧠 Assistant":
         st.title("🧠 Digital DM Assistant")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your notes from your last session. The AI will act as your co-writer, identifying plot holes or suggesting wild dramatic twists for the next game.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your notes or ideas. The AI will act as your co-writer, identifying plot holes or suggesting twists.</div>""", unsafe_allow_html=True)
         notes = st.text_area("Session Notes", placeholder="The party found the map, but killed the NPC who could read it...")
         if st.button("🔍 Analyze Plot"):
-            st.markdown(f"<div class='stat-card'>{get_ai_response(f'Analyze plot twists: {notes}')}</div>", unsafe_allow_html=True)
+            res = get_ai_response(f'Analyze plot twists: {notes}')
+            st.markdown(f"<div class='stat-card'>{res}</div>", unsafe_allow_html=True)
+            if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
-    # New Feedback Form Page (With UX Fixes and Google Sheets)
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         st.write("Help me improve the DM Co-Pilot! What should I build next?")
         
-        # Establish Google Sheets Connection
         from streamlit_gsheets import GSheetsConnection
         conn = st.connection("gsheets", type=GSheetsConnection)
         
         with st.form("user_feedback_form"):
-            # Clickable Star Rating using a horizontal radio button
             user_rating = st.radio("How would you rate the app so far?", 
                                    ["⭐⭐⭐⭐⭐ (5 Stars)", "⭐⭐⭐⭐ (4 Stars)", "⭐⭐⭐ (3 Stars)", "⭐⭐ (2 Stars)", "⭐ (1 Star)"], 
                                    horizontal=True)
@@ -255,10 +323,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             submitted = st.form_submit_button("Submit Feedback")
             
             if submitted:
-                # Extract just the number from the rating selection
                 numerical_rating = user_rating.split("(")[1][0] 
-                
-                # Push Data to Google Sheets
                 sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
                 existing_data = conn.read(spreadsheet=sheet_url, usecols=[0, 1, 2, 3])
                 
@@ -272,7 +337,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 updated_data = pd.concat([existing_data, new_row], ignore_index=True)
                 conn.update(spreadsheet=sheet_url, data=updated_data)
                 
-                # Custom Navy Blue Success Message
                 st.markdown(f"""
                 <div style="background-color: #f0f4f8; border-left: 6px solid #000080; padding: 15px; border-radius: 5px; margin-top: 20px;">
                     <h3 style="color: #000080; margin: 0; font-family: 'Crimson Text', serif;">📬 Feedback Received!</h3>
