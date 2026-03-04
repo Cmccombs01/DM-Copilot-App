@@ -130,7 +130,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.markdown("---")
     
-    # --- UPDATED NAVIGATION MENU ---
+    # --- NAVIGATION MENU ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
@@ -146,13 +146,12 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # --- 🗳️ UPDATED DYNAMIC SIDEBAR POLL ---
+    # --- 🗳️ FIXED DYNAMIC SIDEBAR POLL (Removed index=None to fix analytics crash) ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗳️ Community Poll")
     poll_choice = st.sidebar.radio(
         "What should I build next?", 
-        ["🧩 Trap Architect", "🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator"],
-        index=None
+        ["🧩 Trap Architect", "🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator"]
     )
     if poll_choice:
         st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
@@ -221,7 +220,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                         st.error(f"Could not generate PDF: {e}")
                         logger.error(f"PDF Generation Error: {e}")
 
-    # --- NEW FEATURE: NPC QUICK-FORGE ---
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 The NPC Quick-Forge")
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a profession or basic concept. The AI will instantly generate a named character with a unique quirk, a hidden secret, and a voice prompt for you to act out.</div>""", unsafe_allow_html=True)
@@ -265,7 +263,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                     st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
                     if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
-    # --- NEW FEATURE: DYNAMIC SHOP GENERATOR ---
     elif page == "💰 Dynamic Shop Generator":
         st.title("💰 Dynamic Shop Generator")
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Select a shop type. The AI will generate a shop name, a quirky proprietor, and a formatted inventory table complete with gold piece prices.</div>""", unsafe_allow_html=True)
@@ -285,7 +282,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             st.markdown(f"<div class='stat-card'>{res.replace('\n','<br>')}</div>", unsafe_allow_html=True)
             if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
-    # --- NEW FEATURE: SESSION RECAP SCRIBE ---
     elif page == "📖 Session Recap Scribe":
         st.title("📖 'Previously On...' Summarizer")
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your messy, bullet-point notes from your last game. The AI will rewrite them into a dramatic, polished monologue designed to be read aloud to hype up the players.</div>""", unsafe_allow_html=True)
