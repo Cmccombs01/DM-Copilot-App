@@ -130,10 +130,11 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU ---
+    # --- NAVIGATION MENU (Added Trap Architect) ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
+        "🧩 Trap Architect",
         "🎭 NPC Quick-Forge", 
         "📜 Scribe's Handouts", 
         "💎 Magic Item Artificer", 
@@ -146,12 +147,12 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # --- 🗳️ FIXED DYNAMIC SIDEBAR POLL (Removed index=None to fix analytics crash) ---
+    # --- 🗳️ UPDATED POLL (Removed Trap Architect, added Cursed Items) ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗳️ Community Poll")
     poll_choice = st.sidebar.radio(
         "What should I build next?", 
-        ["🧩 Trap Architect", "🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator"]
+        ["🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator", "💀 Cursed Item Creator"]
     )
     if poll_choice:
         st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
@@ -219,6 +220,26 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                     except Exception as e:
                         st.error(f"Could not generate PDF: {e}")
                         logger.error(f"PDF Generation Error: {e}")
+
+    # --- NEW FEATURE: TRAP ARCHITECT ---
+    elif page == "🧩 Trap Architect":
+        st.title("🧩 Trap & Puzzle Architect")
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a theme or location. The AI will generate a trap or puzzle, complete with 3 tiered hints to give struggling players, and a logical solution.</div>""", unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            trap_theme = st.text_input("Theme or Location", placeholder="e.g. Ancient Elven Tomb, Goblin Camp...")
+        with col2:
+            trap_type = st.radio("Encounter Type", ["Mechanical Trap", "Riddle / Puzzle"])
+
+        if st.button("Construct Trap"):
+            if not trap_theme:
+                st.warning("⚠️ Please enter a theme or location first!")
+            else:
+                with st.spinner(f"Setting the mechanisms for the {trap_type.lower()}..."):
+                    res = get_ai_response(f"Design a clever D&D 5e {trap_type.lower()} for a '{trap_theme}' setting. Include: 1) A flavorful description for the DM to read aloud. 2) The Mechanics (triggers, DC checks, damage, or the riddle text). 3) Three Tiered Hints the DM can hand out if players get stuck. 4) The clear, logical solution.")
+                    st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                    if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 The NPC Quick-Forge")
