@@ -9,6 +9,7 @@ from fpdf import FPDF
 import altair as alt
 import json
 import urllib.parse
+import os
 
 # --- 🐛 ADVANCED ERROR LOGGING SETUP ---
 logging.basicConfig(
@@ -179,11 +180,13 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU ---
+    # --- NAVIGATION MENU (Updated with New Data Tools) ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
         "🏰 Dungeon Map Generator",
+        "📖 Spellbook Analytics",       
+        "🏙️ Instant City Generator",    
         "🧩 Trap Architect",
         "🎭 NPC Quick-Forge", 
         "📜 Scribe's Handouts", 
@@ -305,7 +308,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             c_name = st.session_state.ai_outputs.get("Encounter_Name", "Monster")
             st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
             
-            # --- VTT JSON EXPORT FOR PORTFOLIO ---
             if not res.startswith("❌"):
                 col1, col2 = st.columns(2)
                 try:
@@ -358,18 +360,15 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 for r in range(map_size):
                     row = []
                     for c in range(map_size):
-                        # 30% chance of a wall, 70% chance of floor
                         if random.random() < 0.3:
                             row.append("⬛") 
                         else:
                             row.append("⬜") 
                     grid.append(row)
                 
-                # Plot Start and End points
-                grid[0][0] = "🚪" # Entrance
-                grid[map_size-1][map_size-1] = "🐉" # Boss Room
+                grid[0][0] = "🚪" 
+                grid[map_size-1][map_size-1] = "🐉" 
                 
-                # Add random treasure chests
                 for _ in range(max(1, map_size // 3)):
                     rx, ry = random.randint(0, map_size-1), random.randint(0, map_size-1)
                     if grid[rx][ry] == "⬜":
@@ -384,6 +383,107 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 
         if "Map" in st.session_state.ai_outputs:
             st.markdown(st.session_state.ai_outputs["Map"], unsafe_allow_html=True)
+
+    # --- NEW FEATURE 1: SPELLBOOK ANALYTICS (BULLETPROOF FILENAMES) ---
+    elif page == "📖 Spellbook Analytics":
+        st.title("📖 Spellbook Data Analytics")
+        st.markdown("""<div class='instruction-box'><b>Portfolio Data Demo:</b> This dashboard uses Pandas and Altair to parse through a Kaggle dataset of 5e spells, giving DMs a visual breakdown of magic distribution.</div>""", unsafe_allow_html=True)
+        
+        @st.cache_data
+        def load_spell_data():
+            try:
+                # This will try multiple common filenames so it doesn't crash!
+                if os.path.exists("dnd-spells.csv"):
+                    return pd.read_csv("dnd-spells.csv")
+                else:
+                    return pd.read_csv("spells.csv")
+            except:
+                # FALLBACK: If 'spells.csv' isn't found, generate mock data to keep the app running!
+                schools = ["Evocation", "Abjuration", "Necromancy", "Illusion", "Conjuration", "Divination", "Enchantment", "Transmutation"]
+                data = {
+                    "Name": [f"FAKE DATA: Mystic Spell {i}" for i in range(1, 151)],
+                    "Level": [random.randint(0, 9) for _ in range(150)],
+                    "School": [random.choice(schools) for _ in range(150)]
+                }
+                return pd.DataFrame(data)
+
+        spell_df = load_spell_data()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### Spell Distribution by School")
+            school_counts = spell_df['School'].value_counts().reset_index()
+            school_counts.columns = ['School', 'Count']
+            chart1 = alt.Chart(school_counts).mark_arc(innerRadius=50).encode(
+                theta=alt.Theta(field="Count", type="quantitative"),
+                color=alt.Color(field="School", type="nominal"),
+                tooltip=['School', 'Count']
+            ).interactive()
+            st.altair_chart(chart1, use_container_width=True)
+            
+        with col2:
+            st.markdown("### Spell Count by Level")
+            level_counts = spell_df['Level'].value_counts().reset_index()
+            level_counts.columns = ['Level', 'Count']
+            chart2 = alt.Chart(level_counts).mark_bar(color='#2e5a88').encode(
+                x=alt.X('Level:O', title='Spell Level'),
+                y=alt.Y('Count:Q', title='Number of Spells'),
+                tooltip=['Level', 'Count']
+            ).interactive()
+            st.altair_chart(chart2, use_container_width=True)
+            
+        st.dataframe(spell_df, use_container_width=True)
+
+    # --- NEW FEATURE 2: INSTANT CITY GENERATOR (BULLETPROOF TSV PATTERN) ---
+    elif page == "🏙️ Instant City Generator":
+        st.title("🏙️ Instant Crowd Generator")
+        st.markdown("""<div class='instruction-box'><b>Portfolio Optimization Demo:</b> Calling an LLM API to generate 50 NPCs takes 30 seconds and costs money. Filtering 50 random records from a Kaggle TSV using Pandas takes 0.01 seconds and is completely free!</div>""", unsafe_allow_html=True)
+        
+        crowd_size = st.slider("How many NPCs are in the tavern/street?", 5, 50, 15)
+        
+        @st.cache_data
+        def load_names_data():
+            try:
+                # Try both possible TSV names from Kaggle
+                if os.path.exists("dnd_chars_all.tsv"):
+                    df = pd.read_csv("dnd_chars_all.tsv", sep='\t')
+                else:
+                    df = pd.read_csv("dnd_chars_unique.tsv", sep='\t')
+                
+                name_col = next((col for col in df.columns if 'name' in col.lower()), None)
+                if name_col:
+                    return df[name_col].dropna().tolist()
+                else:
+                    raise Exception("Name column not found in TSV")
+            except Exception as e:
+                logger.error(f"Error loading TSV: {e}")
+                # FALLBACK: Safe default list if file is missing or broken
+                return ["FAKE DATA: Brog", "FAKE DATA: Elara", "FAKE DATA: Percy", "FAKE DATA: Vex", "FAKE DATA: Grog", "FAKE DATA: Scanlan"]
+
+        @st.cache_data
+        def get_professions_and_quirks():
+            professions = ["Blacksmith", "Baker", "Guard", "Pickpocket", "Merchant", "Noble", "Beggar", "Alchemist", "Tailor", "Mercenary"]
+            quirks = ["Always sniffing", "Missing an ear", "Carries a pet rat", "Speaks too loudly", "Extremely paranoid", "Constantly shuffling cards", "Smells like cabbage", "Wears too many rings", "Has a golden tooth", "Never blinks"]
+            return professions, quirks
+            
+        if st.button("Generate Crowd"):
+            log_usage_to_sheet("Instant City", f"Generated crowd of {crowd_size}")
+            name_pool = load_names_data()
+            prof_pool, quirk_pool = get_professions_and_quirks()
+            
+            crowd_data = []
+            for _ in range(crowd_size):
+                crowd_data.append({
+                    "Name": random.choice(name_pool),
+                    "Profession": random.choice(prof_pool),
+                    "Notable Quirk": random.choice(quirk_pool)
+                })
+                
+            crowd_df = pd.DataFrame(crowd_data)
+            st.session_state.ai_outputs["Crowd"] = crowd_df
+            
+        if "Crowd" in st.session_state.ai_outputs:
+            st.dataframe(st.session_state.ai_outputs["Crowd"], use_container_width=True, hide_index=True)
 
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap & Puzzle Architect")
@@ -426,7 +526,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                 st.session_state.ai_outputs["Handout_Style"] = h_style
                 st.session_state.ai_outputs["Handout"] = get_ai_response(f"Write a highly flavorful, realistic {h_style}: {msg}")
                 
-                # Clean prompt for the Image Generator API
                 safe_prompt = urllib.parse.quote(f"A weathered, realistic {h_style} prop for a fantasy Dungeons and Dragons game. The parchment contains text related to: {msg}")
                 st.session_state.ai_outputs["Handout_Image"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=512&height=512&nologo=true"
                 
@@ -436,7 +535,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             st.markdown(f"<div class='handout-card'>", unsafe_allow_html=True)
             st.markdown(f"<h3 style='text-align:center;'>{style.upper()}</h3><hr>", unsafe_allow_html=True)
             
-            # Show the generated image!
             if "Handout_Image" in st.session_state.ai_outputs:
                 st.image(st.session_state.ai_outputs["Handout_Image"], use_container_width=True)
                 
