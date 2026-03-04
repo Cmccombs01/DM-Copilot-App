@@ -1,8 +1,6 @@
+streamlit
 pandas
-groq
 streamlit-analytics2
-ollama
-PyPDF2
-scikit-learn
-numpy
-st-gsheets-connection
+groq
+fpdf
+streamlit-gsheets
