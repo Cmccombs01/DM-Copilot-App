@@ -150,12 +150,18 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     st.sidebar.markdown(f"<div style='text-align:center; font-size:24px; color:#d4af37; background:rgba(0,0,0,0.3); padding:5px; border-radius:5px;'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
     
     st.sidebar.markdown("---")
-    llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
-    user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
+    # --- 🔑 UPDATED API KEY INSTRUCTIONS ---
+    llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
+    if llm_provider == "☁️ Groq (Cloud)":
+        user_api_key = st.sidebar.text_input("Groq API Key", type="password")
+        st.sidebar.caption("🔑 Don't have one? [Get your free Groq API key here!](https://console.groq.com/keys)")
+    else:
+        user_api_key = ""
+        
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU (Expanded) ---
+    # --- NAVIGATION MENU ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
@@ -356,7 +362,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "💀 Cursed Item Creator":
         st.title("💀 Cursed Item Creator")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a theme. The AI will forge an incredibly powerful item your players will <b>want</b> to use, but attach a narrative-driven, deeply unsettling curse to it.</div>""", unsafe_allow_html=True)
         curse_theme = st.text_input("Item Type or Theme", placeholder="e.g. A sentient longsword, a golden crown...")
         if st.button("Forge Cursed Item"):
             log_usage_to_sheet("Cursed Item Creator", curse_theme)
@@ -387,7 +392,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "🐉 The Dragon's Hoard":
         st.title("🐉 The Dragon's Hoard")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Select the Challenge Rating tier of the boss you just defeated. The AI will generate a perfectly balanced treasure hoard.</div>""", unsafe_allow_html=True)
         cr_tier = st.selectbox("Encounter Challenge Rating (CR)", ["CR 0-4 (Local Threat)", "CR 5-10 (Regional Boss)", "CR 11-16 (Kingdom Threat)", "CR 17+ (World Ender)"])
         if st.button("Generate Hoard"):
             log_usage_to_sheet("Dragon's Hoard", cr_tier)
@@ -398,7 +402,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "🍻 Tavern Rumor Mill":
         st.title("🍻 The Tavern Rumor Mill")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Type the name of a town, a dungeon, or an NPC. The AI will generate 3 juicy rumors for your players to eavesdrop on.</div>""", unsafe_allow_html=True)
         rumor_target = st.text_input("Rumor Subject", placeholder="e.g. The town of Phandalin, the local Baron...")
         if st.button("Eavesdrop"):
             log_usage_to_sheet("Rumor Mill", rumor_target)
