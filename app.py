@@ -7,6 +7,8 @@ import streamlit.components.v1 as components
 import logging
 from fpdf import FPDF
 import altair as alt
+import json
+import urllib.parse
 
 # --- 🐛 ADVANCED ERROR LOGGING SETUP ---
 logging.basicConfig(
@@ -99,6 +101,18 @@ st.markdown("""
         font-family: 'MedievalSharp', cursive;
         color: #800000 !important;
     }
+    
+    /* Map Grid */
+    .dungeon-grid {
+        font-size: 28px;
+        line-height: 1.1;
+        letter-spacing: -3px;
+        text-align: center;
+        background-color: #2c3e50;
+        padding: 20px;
+        border-radius: 10px;
+        border: 4px solid #b22222;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -151,7 +165,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.markdown("---")
     
-    # --- 🔑 UPDATED API KEY INSTRUCTIONS ---
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     if llm_provider == "☁️ Groq (Cloud)":
         user_api_key = st.sidebar.text_input("Groq API Key", type="password")
@@ -165,6 +178,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
+        "🏰 Dungeon Map Generator",
         "🧩 Trap Architect",
         "🎭 NPC Quick-Forge", 
         "📜 Scribe's Handouts", 
@@ -187,7 +201,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     st.sidebar.markdown("### 🗳️ Community Poll")
     poll_choice = st.sidebar.radio(
         "What should I build next?", 
-        ["✨ Wild Magic Surge Generator", "🏕️ Travel Montages", "🏰 Dungeon Map Generator", "📜 1d100 Feywild Bargains"]
+        ["✨ Wild Magic Surge Generator", "📜 1d100 Feywild Bargains", "🧪 Alchemy & Potion Crafter", "🎤 Bardic Insult Generator"]
     )
     if poll_choice:
         st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
@@ -280,7 +294,10 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             res = st.session_state.ai_outputs["Encounter"]
             c_name = st.session_state.ai_outputs.get("Encounter_Name", "Monster")
             st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+            
+            # --- VTT JSON EXPORT FOR PORTFOLIO ---
             if not res.startswith("❌"):
+                col1, col2 = st.columns(2)
                 try:
                     pdf = FPDF()
                     pdf.add_page()
@@ -289,7 +306,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                     pdf.multi_cell(0, 10, txt=f"{c_name.upper()} - STAT BLOCK\n\n{clean_text}")
                     pdf_bytes = pdf.output(dest='S').encode('latin-1')
                     
-                    st.download_button(
+                    col1.download_button(
                         label="📝 Download PDF Stat Block",
                         data=pdf_bytes,
                         file_name=f"{c_name.replace(' ', '_')}_statblock.pdf",
@@ -298,6 +315,65 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                     )
                 except Exception as e:
                     pass
+                
+                foundry_json = {
+                    "name": c_name,
+                    "type": "npc",
+                    "system": {
+                        "details": {
+                            "biography": {
+                                "value": f"<p>{res.replace(chr(10), '<br>')}</p>"
+                            }
+                        }
+                    }
+                }
+                col2.download_button(
+                    label="⚙️ Export to Foundry VTT (JSON)",
+                    data=json.dumps(foundry_json, indent=4),
+                    file_name=f"{c_name.replace(' ', '_')}_foundry.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+
+    elif page == "🏰 Dungeon Map Generator":
+        st.title("🏰 Procedural Map Generator")
+        st.markdown("""<div class='instruction-box'><b>Data Structure Demo:</b> Generates a randomized 2D dungeon matrix. Perfect for quickly getting a layout for a spontaneous dungeon crawl!</div>""", unsafe_allow_html=True)
+        
+        map_size = st.slider("Select Matrix Size", 5, 15, 8)
+        
+        if st.button("Generate Dungeon Matrix"):
+            log_usage_to_sheet("Dungeon Map", f"Size: {map_size}")
+            with st.spinner("Calculating geometry..."):
+                grid = []
+                for r in range(map_size):
+                    row = []
+                    for c in range(map_size):
+                        # 30% chance of a wall, 70% chance of floor
+                        if random.random() < 0.3:
+                            row.append("⬛") 
+                        else:
+                            row.append("⬜") 
+                    grid.append(row)
+                
+                # Plot Start and End points
+                grid[0][0] = "🚪" # Entrance
+                grid[map_size-1][map_size-1] = "🐉" # Boss Room
+                
+                # Add random treasure chests
+                for _ in range(max(1, map_size // 3)):
+                    rx, ry = random.randint(0, map_size-1), random.randint(0, map_size-1)
+                    if grid[rx][ry] == "⬜":
+                        grid[rx][ry] = "💰"
+                
+                html_grid = "<div class='dungeon-grid'>"
+                for row in grid:
+                    html_grid += "".join(row) + "<br>"
+                html_grid += "</div>"
+                
+                st.session_state.ai_outputs["Map"] = html_grid
+                
+        if "Map" in st.session_state.ai_outputs:
+            st.markdown(st.session_state.ai_outputs["Map"], unsafe_allow_html=True)
 
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap & Puzzle Architect")
@@ -330,16 +406,32 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
 
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
-        h_style = st.selectbox("Style", ["Bounty Poster", "King's Decree", "Torn Journal", "Mystic Prophecy"])
+        st.markdown("""<div class='instruction-box'><b>New AI Image Feature!</b> It now generates the text AND an immersive image prop of the document for you to show your players.</div>""", unsafe_allow_html=True)
+        h_style = st.selectbox("Style", ["Wanted Poster", "King's Decree", "Torn Journal Page", "Mystic Prophecy"])
         msg = st.text_input("Core Hook", placeholder="Wanted for stealing the Duke's ring...")
-        if st.button("Forge Document"):
+        
+        if st.button("Forge Document & Image Prop"):
             log_usage_to_sheet("Scribe Handouts", f"{h_style} - {msg}")
-            with st.spinner("Writing..."):
+            with st.spinner("Writing and Illustrating..."):
                 st.session_state.ai_outputs["Handout_Style"] = h_style
-                st.session_state.ai_outputs["Handout"] = get_ai_response(f"Write a flavorful {h_style}: {msg}")
+                st.session_state.ai_outputs["Handout"] = get_ai_response(f"Write a highly flavorful, realistic {h_style}: {msg}")
+                
+                # Clean prompt for the Image Generator API
+                safe_prompt = urllib.parse.quote(f"A weathered, realistic {h_style} prop for a fantasy Dungeons and Dragons game. The parchment contains text related to: {msg}")
+                st.session_state.ai_outputs["Handout_Image"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=512&height=512&nologo=true"
+                
         if "Handout" in st.session_state.ai_outputs:
             style = st.session_state.ai_outputs.get("Handout_Style", h_style)
-            st.markdown(f"<div class='handout-card'><h3 style='text-align:center;'>{style.upper()}</h3><hr>{st.session_state.ai_outputs['Handout'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+            
+            st.markdown(f"<div class='handout-card'>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='text-align:center;'>{style.upper()}</h3><hr>", unsafe_allow_html=True)
+            
+            # Show the generated image!
+            if "Handout_Image" in st.session_state.ai_outputs:
+                st.image(st.session_state.ai_outputs["Handout_Image"], use_container_width=True)
+                
+            st.markdown(f"<br>{st.session_state.ai_outputs['Handout'].replace('\n', '<br>')}", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
