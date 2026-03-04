@@ -130,7 +130,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU (Added Trap Architect) ---
+    # --- NAVIGATION MENU (Added Pocket Trash) ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
@@ -138,7 +138,8 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         "🎭 NPC Quick-Forge", 
         "📜 Scribe's Handouts", 
         "💎 Magic Item Artificer", 
-        "💰 Dynamic Shop Generator", 
+        "💰 Dynamic Shop Generator",
+        "🎒 'Pocket Trash' Loot", 
         "🌍 Worldbuilder", 
         "📖 Session Recap Scribe",
         "🧠 Assistant", 
@@ -147,12 +148,12 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # --- 🗳️ UPDATED POLL (Removed Trap Architect, added Cursed Items) ---
+    # --- 🗳️ UPDATED POLL (Removed Pocket Trash, added Tavern Rumors) ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗳️ Community Poll")
     poll_choice = st.sidebar.radio(
         "What should I build next?", 
-        ["🎒 'Pocket Trash' Loot", "🏕️ Travel Montages", "🏰 Dungeon Map Generator", "💀 Cursed Item Creator"]
+        ["🏕️ Travel Montages", "🏰 Dungeon Map Generator", "💀 Cursed Item Creator", "🍻 Tavern Rumor Mill"]
     )
     if poll_choice:
         st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
@@ -221,7 +222,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                         st.error(f"Could not generate PDF: {e}")
                         logger.error(f"PDF Generation Error: {e}")
 
-    # --- NEW FEATURE: TRAP ARCHITECT ---
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap & Puzzle Architect")
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a theme or location. The AI will generate a trap or puzzle, complete with 3 tiered hints to give struggling players, and a logical solution.</div>""", unsafe_allow_html=True)
@@ -291,6 +291,19 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         if st.button("Generate Shop"):
             with st.spinner("Stocking the shelves..."):
                 res = get_ai_response(f"Generate a '{shop_type}' for a D&D 5e game. Include a creative Shop Name, a brief description of the quirky shopkeeper, and a formatted table of 5-7 thematic items for sale with their gold piece prices.")
+                st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+                if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
+
+    # --- NEW FEATURE: POCKET TRASH LOOT ---
+    elif page == "🎒 'Pocket Trash' Loot":
+        st.title("🎒 'Pocket Trash' Loot Generator")
+        st.markdown("""<div class='instruction-box'><b>How to use:</b> Select who the players just looted. The AI will generate a handful of flavorful, mundane items to give the world depth, instead of just handing out '2 gold pieces'.</div>""", unsafe_allow_html=True)
+        
+        loot_target = st.selectbox("Who (or what) was looted?", ["Common Bandit / Thug", "Goblin / Orc Grunt", "Wealthy Noble / Merchant", "Cultist / Dark Acolyte", "Ancient Undead (Skeleton/Zombie)", "Dead Explorer / Adventurer"])
+        
+        if st.button("Search their pockets!"):
+            with st.spinner("Rifling through their belongings..."):
+                res = get_ai_response(f"Generate 'pocket trash' loot for a D&D 5e game. The players just defeated and looted a '{loot_target}'. Instead of just generic coins, provide a formatted, bulleted list of 4-5 flavorful, mundane items they find in their pockets or pouches (e.g., a carved wooden pipe, a half-eaten block of cheese, a strange love letter). Make it highly thematic to the creature type. Include a tiny, randomized amount of relevant coins at the very end.")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
                 if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
