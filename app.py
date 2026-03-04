@@ -125,6 +125,8 @@ if 'error_log' not in st.session_state:
     st.session_state.error_log = []
 if 'ai_outputs' not in st.session_state:
     st.session_state.ai_outputs = {}
+if 'last_page' not in st.session_state:
+    st.session_state.last_page = None
 
 # --- 📊 BACKGROUND DATA LOGGER ---
 def log_usage_to_sheet(tool_name, user_input):
@@ -154,13 +156,16 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     # --- SIDEBAR ---
     st.sidebar.markdown(f"<h2 style='text-align: center; color: #d4af37;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     
-    # Dice Tray
+    # Dice Tray (Now with Analytics Tracking!)
     st.sidebar.markdown("### 🎲 Quick-Roll Tray")
     cols = st.sidebar.columns(3)
     dice = [4, 6, 8, 10, 12, 20]
     for i, d in enumerate(dice):
         if cols[i % 3].button(f"d{d}"):
-            st.session_state.last_roll = f"d{d}: {random.randint(1, d)}"
+            roll_result = random.randint(1, d)
+            st.session_state.last_roll = f"d{d}: {roll_result}"
+            log_usage_to_sheet("Dice Roller", f"Rolled d{d} (Result: {roll_result})")
+            
     st.sidebar.markdown(f"<div style='text-align:center; font-size:24px; color:#d4af37; background:rgba(0,0,0,0.3); padding:5px; border-radius:5px;'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
     
     st.sidebar.markdown("---")
@@ -193,6 +198,11 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         "🧠 Assistant", 
         "📫 Give Feedback"
     ])
+    
+    # --- AUTOMATIC PAGE VIEW TRACKING ---
+    if st.session_state.last_page != page:
+        log_usage_to_sheet("Page Navigation", f"Viewed: {page}")
+        st.session_state.last_page = page
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
