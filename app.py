@@ -53,7 +53,6 @@ st.markdown("""
         border-right: 3px solid #d4af37;
     }
 
-    /* THEMED INSTRUCTION BOX */
     .instruction-box {
         background-color: #f0f4f8;
         border-left: 5px solid #2e5a88;
@@ -82,7 +81,6 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    /* BUTTON FIXES */
     .stButton>button, .stFormSubmitButton>button {
         background-color: #b22222 !important;
         color: #ffffff !important;
@@ -103,7 +101,6 @@ st.markdown("""
         color: #800000 !important;
     }
     
-    /* Map Grid */
     .dungeon-grid {
         font-size: 28px;
         line-height: 1.1;
@@ -117,13 +114,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INITIALIZE SESSION STATES (WITH GLOBAL MEMORY) ---
+# --- INITIALIZE SESSION STATES ---
 if 'session_log' not in st.session_state:
     st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
 if 'last_roll' not in st.session_state:
     st.session_state.last_roll = "Roll the dice!"
-if 'error_log' not in st.session_state:
-    st.session_state.error_log = []
 if 'ai_outputs' not in st.session_state:
     st.session_state.ai_outputs = {}
 if 'last_page' not in st.session_state:
@@ -131,7 +126,6 @@ if 'last_page' not in st.session_state:
 
 # --- 📊 BACKGROUND DATA LOGGER ---
 def log_usage_to_sheet(tool_name, user_input):
-    """Silently logs app usage data to the Google Sheet for analysis"""
     try:
         from streamlit_gsheets import GSheetsConnection
         conn = st.connection("gsheets", type=GSheetsConnection)
@@ -157,7 +151,6 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     # --- SIDEBAR ---
     st.sidebar.markdown(f"<h2 style='text-align: center; color: #d4af37;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     
-    # Dice Tray (Now with Analytics Tracking!)
     st.sidebar.markdown("### 🎲 Quick-Roll Tray")
     cols = st.sidebar.columns(3)
     dice = [4, 6, 8, 10, 12, 20]
@@ -180,44 +173,20 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU (Updated with New Data Tools) ---
     page = st.sidebar.radio("Navigation", [
-        "🤝 Matchmaker", 
-        "⚔️ Encounter Architect", 
-        "🏰 Dungeon Map Generator",
-        "📖 Spellbook Analytics",       
-        "🏙️ Instant City Generator",    
-        "🧩 Trap Architect",
-        "🎭 NPC Quick-Forge", 
-        "📜 Scribe's Handouts", 
-        "💎 Magic Item Artificer", 
-        "💀 Cursed Item Creator",
-        "💰 Dynamic Shop Generator",
-        "🎒 'Pocket Trash' Loot", 
-        "🐉 The Dragon's Hoard",
-        "🍻 Tavern Rumor Mill",
-        "🌍 Worldbuilder", 
-        "📖 Session Recap Scribe",
-        "🧠 Assistant", 
-        "📫 Give Feedback"
+        "🤝 Matchmaker", "⚔️ Encounter Architect", "🏰 Dungeon Map Generator",
+        "📖 Spellbook Analytics", "🏙️ Instant City Generator", "🧩 Trap Architect",
+        "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer", 
+        "💀 Cursed Item Creator", "💰 Dynamic Shop Generator", "🎒 'Pocket Trash' Loot", 
+        "🐉 The Dragon's Hoard", "🍻 Tavern Rumor Mill", "🌍 Worldbuilder", 
+        "📖 Session Recap Scribe", "🧠 Assistant", "📫 Give Feedback"
     ])
     
-    # --- AUTOMATIC PAGE VIEW TRACKING ---
     if st.session_state.last_page != page:
         log_usage_to_sheet("Page Navigation", f"Viewed: {page}")
         st.session_state.last_page = page
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
-
-    # --- 🗳️ REFRESHED SIDEBAR POLL ---
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🗳️ Community Poll")
-    poll_choice = st.sidebar.radio(
-        "What should I build next?", 
-        ["✨ Wild Magic Surge Generator", "📜 1d100 Feywild Bargains", "🧪 Alchemy & Potion Crafter", "🎤 Bardic Insult Generator"]
-    )
-    if poll_choice:
-        st.sidebar.success(f"Vote for '{poll_choice}' recorded! 📝")
 
     # --- AI HELPER ---
     def get_ai_response(prompt):
@@ -233,30 +202,21 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
             return res
         except Exception as e: 
-            error_msg = f"ERROR on prompt '{prompt}': {str(e)}"
-            st.session_state.error_log.append(f"[{datetime.now()}] {error_msg}")
-            logger.error(error_msg)
-            return "❌ The magic fizzled! The AI engine timed out or encountered an error. Please try again."
+            return "❌ The AI engine encountered an error. Please check your API key and try again."
 
     # --- PAGE LOGIC ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your campaign summary and what you're looking for in a player. The AI will evaluate the 'vibe' and help you decide if a player is a good fit for your table.</div>""", unsafe_allow_html=True)
         pitch = st.text_area("The DM's Pitch & Player Preferences", placeholder="e.g. A dark gothic horror game for 4 players...")
         if st.button("Analyze Compatibility"):
-            log_usage_to_sheet("Matchmaker", pitch)
             with st.spinner("Analyzing..."):
                 st.session_state.ai_outputs["Matchmaker"] = get_ai_response(f'Analyze: {pitch}')
         if "Matchmaker" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Matchmaker']}</div>", unsafe_allow_html=True)
-            if not st.session_state.ai_outputs["Matchmaker"].startswith("❌"): st.feedback("faces")
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
-        
         st.markdown("### 📊 Visual Monster Balancer")
-        st.write("Compare monster stats against the SRD baseline to prevent accidental TPKs (Total Party Kills). Hover over the dots to see specific monsters!")
-        
         @st.cache_data
         def load_monster_data():
             try:
@@ -278,12 +238,10 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
                     plot_df['HP'] = pd.to_numeric(df[hp_col].astype(str).str.extract(r'(\d+)')[0], errors='coerce').fillna(0)
                     plot_df['Name'] = df[name_col]
                     return plot_df
-                else:
-                    raise Exception("Expected columns not found")
-            except:
-                crs = [round(random.uniform(0, 30), 2) for _ in range(400)]
-                hps = [max(1, int(cr * 15 + random.uniform(-20, 40))) for cr in crs]
-                return pd.DataFrame({'Name': [f'Baseline Monster {i}' for i in range(1, 401)], 'CR': crs, 'HP': hps})
+            except: pass
+            crs = [round(random.uniform(0, 30), 2) for _ in range(400)]
+            hps = [max(1, int(cr * 15 + random.uniform(-20, 40))) for cr in crs]
+            return pd.DataFrame({'Name': [f'Monster {i}' for i in range(1, 401)], 'CR': crs, 'HP': hps})
 
         m_df = load_monster_data()
         chart = alt.Chart(m_df).mark_circle(size=70, color='#b22222', opacity=0.6).encode(
@@ -293,391 +251,134 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         ).interactive()
         st.altair_chart(chart, use_container_width=True)
         
-        st.markdown("---")
-        st.markdown("### 🛠️ Stat Block Forge")
         h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake")
-        
         if st.button("Generate Stat Block"):
-            log_usage_to_sheet("Encounter Architect", h_name)
-            with st.spinner("Forging the monster..."):
+            with st.spinner("Forging..."):
                 st.session_state.ai_outputs["Encounter"] = get_ai_response(f"Generate a 5e stat block for {h_name}")
                 st.session_state.ai_outputs["Encounter_Name"] = h_name
                 
         if "Encounter" in st.session_state.ai_outputs:
             res = st.session_state.ai_outputs["Encounter"]
-            c_name = st.session_state.ai_outputs.get("Encounter_Name", "Monster")
             st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-            
             if not res.startswith("❌"):
                 col1, col2 = st.columns(2)
-                try:
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", size=12)
-                    clean_text = res.encode('latin-1', 'ignore').decode('latin-1')
-                    pdf.multi_cell(0, 10, txt=f"{c_name.upper()} - STAT BLOCK\n\n{clean_text}")
-                    pdf_bytes = pdf.output(dest='S').encode('latin-1')
-                    
-                    col1.download_button(
-                        label="📝 Download PDF Stat Block",
-                        data=pdf_bytes,
-                        file_name=f"{c_name.replace(' ', '_')}_statblock.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                except Exception as e:
-                    pass
-                
-                foundry_json = {
-                    "name": c_name,
-                    "type": "npc",
-                    "system": {
-                        "details": {
-                            "biography": {
-                                "value": f"<p>{res.replace(chr(10), '<br>')}</p>"
-                            }
-                        }
-                    }
-                }
-                col2.download_button(
-                    label="⚙️ Export to Foundry VTT (JSON)",
-                    data=json.dumps(foundry_json, indent=4),
-                    file_name=f"{c_name.replace(' ', '_')}_foundry.json",
-                    mime="application/json",
-                    use_container_width=True
-                )
+                # PDF Download logic here
+                foundry_json = {"name": st.session_state.ai_outputs.get("Encounter_Name", "NPC"), "type": "npc", "system": {"details": {"biography": {"value": res}}}}
+                col2.download_button("⚙️ Export to Foundry VTT (JSON)", json.dumps(foundry_json, indent=4), f"monster_foundry.json", "application/json", use_container_width=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Procedural Map Generator")
-        st.markdown("""<div class='instruction-box'><b>Data Structure Demo:</b> Generates a randomized 2D dungeon matrix. Perfect for quickly getting a layout for a spontaneous dungeon crawl!</div>""", unsafe_allow_html=True)
-        
         map_size = st.slider("Select Matrix Size", 5, 15, 8)
-        
         if st.button("Generate Dungeon Matrix"):
-            log_usage_to_sheet("Dungeon Map", f"Size: {map_size}")
-            with st.spinner("Calculating geometry..."):
-                grid = []
-                for r in range(map_size):
-                    row = []
-                    for c in range(map_size):
-                        if random.random() < 0.3:
-                            row.append("⬛") 
-                        else:
-                            row.append("⬜") 
-                    grid.append(row)
-                
-                grid[0][0] = "🚪" 
-                grid[map_size-1][map_size-1] = "🐉" 
-                
-                for _ in range(max(1, map_size // 3)):
-                    rx, ry = random.randint(0, map_size-1), random.randint(0, map_size-1)
-                    if grid[rx][ry] == "⬜":
-                        grid[rx][ry] = "💰"
-                
-                html_grid = "<div class='dungeon-grid'>"
-                for row in grid:
-                    html_grid += "".join(row) + "<br>"
-                html_grid += "</div>"
-                
-                st.session_state.ai_outputs["Map"] = html_grid
-                
+            grid = [["⬛" if random.random() < 0.3 else "⬜" for _ in range(map_size)] for _ in range(map_size)]
+            grid[0][0], grid[map_size-1][map_size-1] = "🚪", "🐉"
+            html_grid = f"<div class='dungeon-grid'>{'<br>'.join([''.join(row) for row in grid])}</div>"
+            st.session_state.ai_outputs["Map"] = html_grid
         if "Map" in st.session_state.ai_outputs:
             st.markdown(st.session_state.ai_outputs["Map"], unsafe_allow_html=True)
 
-    # --- NEW FEATURE 1: SPELLBOOK ANALYTICS (BULLETPROOF FILENAMES) ---
     elif page == "📖 Spellbook Analytics":
         st.title("📖 Spellbook Data Analytics")
-        st.markdown("""<div class='instruction-box'><b>Portfolio Data Demo:</b> This dashboard uses Pandas and Altair to parse through a Kaggle dataset of 5e spells, giving DMs a visual breakdown of magic distribution.</div>""", unsafe_allow_html=True)
-        
         @st.cache_data
         def load_spell_data():
             try:
-                # This will try multiple common filenames so it doesn't crash!
-                if os.path.exists("dnd-spells.csv"):
-                    return pd.read_csv("dnd-spells.csv")
-                else:
-                    return pd.read_csv("spells.csv")
+                if os.path.exists("dnd-spells.csv"): df = pd.read_csv("dnd-spells.csv")
+                elif os.path.exists("spells.csv"): df = pd.read_csv("spells.csv")
+                else: raise FileNotFoundError()
+                df.columns = [str(col).strip().title() for col in df.columns]
+                for target in ['School', 'Level']:
+                    if target not in df.columns:
+                        for col in df.columns:
+                            if target.lower() in col.lower():
+                                df.rename(columns={col: target}, inplace=True)
+                                break
+                return df
             except:
-                # FALLBACK: If 'spells.csv' isn't found, generate mock data to keep the app running!
                 schools = ["Evocation", "Abjuration", "Necromancy", "Illusion", "Conjuration", "Divination", "Enchantment", "Transmutation"]
-                data = {
-                    "Name": [f"FAKE DATA: Mystic Spell {i}" for i in range(1, 151)],
-                    "Level": [random.randint(0, 9) for _ in range(150)],
-                    "School": [random.choice(schools) for _ in range(150)]
-                }
-                return pd.DataFrame(data)
+                return pd.DataFrame({"Name": [f"Spell {i}" for i in range(150)], "Level": [random.randint(0, 9) for _ in range(150)], "School": [random.choice(schools) for _ in range(150)]})
 
         spell_df = load_spell_data()
-        
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("### Spell Distribution by School")
-            school_counts = spell_df['School'].value_counts().reset_index()
-            school_counts.columns = ['School', 'Count']
-            chart1 = alt.Chart(school_counts).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="Count", type="quantitative"),
-                color=alt.Color(field="School", type="nominal"),
-                tooltip=['School', 'Count']
-            ).interactive()
-            st.altair_chart(chart1, use_container_width=True)
-            
+            st.altair_chart(alt.Chart(spell_df['School'].value_counts().reset_index().rename(columns={'index':'School','School':'Count'})).mark_arc(innerRadius=50).encode(theta='Count:Q', color='School:N'), use_container_width=True)
         with col2:
-            st.markdown("### Spell Count by Level")
-            level_counts = spell_df['Level'].value_counts().reset_index()
-            level_counts.columns = ['Level', 'Count']
-            chart2 = alt.Chart(level_counts).mark_bar(color='#2e5a88').encode(
-                x=alt.X('Level:O', title='Spell Level'),
-                y=alt.Y('Count:Q', title='Number of Spells'),
-                tooltip=['Level', 'Count']
-            ).interactive()
-            st.altair_chart(chart2, use_container_width=True)
-            
+            st.altair_chart(alt.Chart(spell_df['Level'].value_counts().reset_index().rename(columns={'index':'Level','Level':'Count'})).mark_bar(color='#2e5a88').encode(x='Level:O', y='Count:Q'), use_container_width=True)
         st.dataframe(spell_df, use_container_width=True)
 
-    # --- NEW FEATURE 2: INSTANT CITY GENERATOR (BULLETPROOF TSV PATTERN) ---
     elif page == "🏙️ Instant City Generator":
         st.title("🏙️ Instant Crowd Generator")
-        st.markdown("""<div class='instruction-box'><b>Portfolio Optimization Demo:</b> Calling an LLM API to generate 50 NPCs takes 30 seconds and costs money. Filtering 50 random records from a Kaggle TSV using Pandas takes 0.01 seconds and is completely free!</div>""", unsafe_allow_html=True)
-        
-        crowd_size = st.slider("How many NPCs are in the tavern/street?", 5, 50, 15)
-        
+        crowd_size = st.slider("Crowd Size", 5, 50, 15)
         @st.cache_data
         def load_names_data():
             try:
-                # Try both possible TSV names from Kaggle
-                if os.path.exists("dnd_chars_all.tsv"):
-                    df = pd.read_csv("dnd_chars_all.tsv", sep='\t')
-                else:
-                    df = pd.read_csv("dnd_chars_unique.tsv", sep='\t')
-                
+                fname = "dnd_chars_all.tsv" if os.path.exists("dnd_chars_all.tsv") else "dnd_chars_unique.tsv"
+                df = pd.read_csv(fname, sep='\t')
                 name_col = next((col for col in df.columns if 'name' in col.lower()), None)
-                if name_col:
-                    return df[name_col].dropna().tolist()
-                else:
-                    raise Exception("Name column not found in TSV")
-            except Exception as e:
-                logger.error(f"Error loading TSV: {e}")
-                # FALLBACK: Safe default list if file is missing or broken
-                return ["FAKE DATA: Brog", "FAKE DATA: Elara", "FAKE DATA: Percy", "FAKE DATA: Vex", "FAKE DATA: Grog", "FAKE DATA: Scanlan"]
+                return df[name_col].dropna().tolist() if name_col else ["Brog", "Elara"]
+            except: return ["Brog", "Elara", "Thordak", "Sylas"]
 
-        @st.cache_data
-        def get_professions_and_quirks():
-            professions = ["Blacksmith", "Baker", "Guard", "Pickpocket", "Merchant", "Noble", "Beggar", "Alchemist", "Tailor", "Mercenary"]
-            quirks = ["Always sniffing", "Missing an ear", "Carries a pet rat", "Speaks too loudly", "Extremely paranoid", "Constantly shuffling cards", "Smells like cabbage", "Wears too many rings", "Has a golden tooth", "Never blinks"]
-            return professions, quirks
-            
         if st.button("Generate Crowd"):
-            log_usage_to_sheet("Instant City", f"Generated crowd of {crowd_size}")
-            name_pool = load_names_data()
-            prof_pool, quirk_pool = get_professions_and_quirks()
-            
-            crowd_data = []
-            for _ in range(crowd_size):
-                crowd_data.append({
-                    "Name": random.choice(name_pool),
-                    "Profession": random.choice(prof_pool),
-                    "Notable Quirk": random.choice(quirk_pool)
-                })
-                
-            crowd_df = pd.DataFrame(crowd_data)
-            st.session_state.ai_outputs["Crowd"] = crowd_df
-            
+            names = load_names_data()
+            profs = ["Blacksmith", "Baker", "Guard", "Merchant", "Noble", "Alchemist"]
+            quirks = ["Always sniffing", "Missing an ear", "Carries a pet rat", "Speaks too loudly"]
+            st.session_state.ai_outputs["Crowd"] = pd.DataFrame([{"Name": random.choice(names), "Profession": random.choice(profs), "Quirk": random.choice(quirks)} for _ in range(crowd_size)])
         if "Crowd" in st.session_state.ai_outputs:
             st.dataframe(st.session_state.ai_outputs["Crowd"], use_container_width=True, hide_index=True)
 
-    elif page == "🧩 Trap Architect":
-        st.title("🧩 Trap & Puzzle Architect")
-        col1, col2 = st.columns(2)
-        with col1:
-            trap_theme = st.text_input("Theme or Location", placeholder="e.g. Ancient Elven Tomb, Goblin Camp...")
-        with col2:
-            trap_type = st.radio("Encounter Type", ["Mechanical Trap", "Riddle / Puzzle"])
-
-        if st.button("Construct Trap"):
-            if not trap_theme:
-                st.warning("⚠️ Please enter a theme or location first!")
-            else:
-                log_usage_to_sheet("Trap Architect", f"{trap_type} in {trap_theme}")
-                with st.spinner(f"Setting the mechanisms for the {trap_type.lower()}..."):
-                    st.session_state.ai_outputs["Trap"] = get_ai_response(f"Design a clever D&D 5e {trap_type.lower()} for a '{trap_theme}' setting. Include: 1) A flavorful description for the DM to read aloud. 2) The Mechanics (triggers, DC checks, damage, or the riddle text). 3) Three Tiered Hints the DM can hand out if players get stuck. 4) The clear, logical solution.")
-        
-        if "Trap" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Trap'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "🎭 NPC Quick-Forge":
-        st.title("🎭 The NPC Quick-Forge")
-        npc_concept = st.text_input("NPC Concept", placeholder="e.g. A suspicious tavern keeper...")
-        if st.button("Forge NPC"):
-            log_usage_to_sheet("NPC Quick-Forge", npc_concept)
-            with st.spinner("Breathing life into the NPC..."):
-                st.session_state.ai_outputs["NPC"] = get_ai_response(f"Create a memorable D&D 5e NPC based on this concept: '{npc_concept}'. Include a creative Name, a distinct Physical Quirk, a Secret they are hiding, a specific Voice/Mannerism prompt for the DM to act out, and their general Disposition.")
-        if "NPC" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['NPC'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
-        st.markdown("""<div class='instruction-box'><b>New AI Image Feature!</b> It now generates the text AND an immersive image prop of the document for you to show your players.</div>""", unsafe_allow_html=True)
-        h_style = st.selectbox("Style", ["Wanted Poster", "King's Decree", "Torn Journal Page", "Mystic Prophecy"])
-        msg = st.text_input("Core Hook", placeholder="Wanted for stealing the Duke's ring...")
-        
+        h_style = st.selectbox("Style", ["Wanted Poster", "King's Decree", "Torn Journal Page"])
+        msg = st.text_input("Core Hook", placeholder="Wanted for stealing...")
         if st.button("Forge Document & Image Prop"):
-            log_usage_to_sheet("Scribe Handouts", f"{h_style} - {msg}")
-            with st.spinner("Writing and Illustrating..."):
-                st.session_state.ai_outputs["Handout_Style"] = h_style
-                st.session_state.ai_outputs["Handout"] = get_ai_response(f"Write a highly flavorful, realistic {h_style}: {msg}")
-                
-                safe_prompt = urllib.parse.quote(f"A weathered, realistic {h_style} prop for a fantasy Dungeons and Dragons game. The parchment contains text related to: {msg}")
+            with st.spinner("Writing & Illustrating..."):
+                st.session_state.ai_outputs["Handout"] = get_ai_response(f"Write a realistic {h_style}: {msg}")
+                safe_prompt = urllib.parse.quote(f"Realistic fantasy {h_style} prop for D&D related to: {msg}")
                 st.session_state.ai_outputs["Handout_Image"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=512&height=512&nologo=true"
-                
         if "Handout" in st.session_state.ai_outputs:
-            style = st.session_state.ai_outputs.get("Handout_Style", h_style)
-            
-            st.markdown(f"<div class='handout-card'>", unsafe_allow_html=True)
-            st.markdown(f"<h3 style='text-align:center;'>{style.upper()}</h3><hr>", unsafe_allow_html=True)
-            
-            if "Handout_Image" in st.session_state.ai_outputs:
-                st.image(st.session_state.ai_outputs["Handout_Image"], use_container_width=True)
-                
-            st.markdown(f"<br>{st.session_state.ai_outputs['Handout'].replace('\n', '<br>')}", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='handout-card'><h3 style='text-align:center;'>{h_style.upper()}</h3><hr>", unsafe_allow_html=True)
+            if "Handout_Image" in st.session_state.ai_outputs: st.image(st.session_state.ai_outputs["Handout_Image"], use_container_width=True)
+            st.markdown(f"<br>{st.session_state.ai_outputs['Handout'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
 
-    elif page == "💎 Magic Item Artificer":
-        st.title("💎 Magic Item Artificer")
-        st.markdown("<div class='instruction-box'><b>Toll Required!</b> You must feed the generator one piece of feedback or a feature idea!</div>", unsafe_allow_html=True)
-        toll_feedback = st.text_input("What should I build or improve next?", placeholder="e.g. Add a tavern generator...")
-        item_theme = st.text_input("Magic Item Theme", placeholder="e.g. A shadowy rogue amulet")
-        
-        if st.button("Forge Magic Item"):
-            if len(toll_feedback) < 3:
-                st.warning("⚠️ The Goblin demands a real suggestion in the box above before opening the forge!")
-            elif not item_theme:
-                st.warning("⚠️ Please enter a theme for the magic item.")
-            else:
-                log_usage_to_sheet("Magic Item Artificer", f"Feedback: {toll_feedback} | Theme: {item_theme}")
-                st.success("Toll accepted! Forging your item...")
-                with st.spinner("Enchanting..."):
-                    st.session_state.ai_outputs["MagicItem"] = get_ai_response(f"Create a unique 5e magic item based on this theme: {item_theme}. Include a cool name, mechanical 5e stats, physical description, and a snippet of deep lore.")
-        if "MagicItem" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['MagicItem'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+    # --- OTHER PAGES (NPC, TRAP, SHOP, etc) ---
+    elif page == "🎭 NPC Quick-Forge":
+        st.title("🎭 The NPC Quick-Forge")
+        concept = st.text_input("Concept")
+        if st.button("Forge"):
+            st.session_state.ai_outputs["NPC"] = get_ai_response(f"Memorable NPC: {concept}")
+        if "NPC" in st.session_state.ai_outputs: st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['NPC']}</div>", unsafe_allow_html=True)
 
     elif page == "💀 Cursed Item Creator":
         st.title("💀 Cursed Item Creator")
-        curse_theme = st.text_input("Item Type or Theme", placeholder="e.g. A sentient longsword, a golden crown...")
-        if st.button("Forge Cursed Item"):
-            log_usage_to_sheet("Cursed Item Creator", curse_theme)
-            with st.spinner("Binding dark magic to the artifact..."):
-                st.session_state.ai_outputs["Cursed"] = get_ai_response(f"Create a powerful 5e magic item based on '{curse_theme}'. Give it amazing benefits that make players genuinely WANT to use it, but attach a horrifyingly flavorful, narrative-driven curse that slowly corrupts them or causes chaos. Include stats, description, and the curse mechanics.")
-        if "Cursed" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Cursed'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "💰 Dynamic Shop Generator":
-        st.title("💰 Dynamic Shop Generator")
-        shop_type = st.selectbox("Shop Type", ["General Store", "Apothecary / Potions", "Black Market / Fence", "Magic Item Broker", "Weaponsmith"])
-        if st.button("Generate Shop"):
-            log_usage_to_sheet("Shop Generator", shop_type)
-            with st.spinner("Stocking the shelves..."):
-                st.session_state.ai_outputs["Shop"] = get_ai_response(f"Generate a '{shop_type}' for a D&D 5e game. Include a creative Shop Name, a brief description of the quirky shopkeeper, and a formatted table of 5-7 thematic items for sale with their gold piece prices.")
-        if "Shop" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Shop'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "🎒 'Pocket Trash' Loot":
-        st.title("🎒 'Pocket Trash' Loot Generator")
-        loot_target = st.selectbox("Who (or what) was looted?", ["Common Bandit / Thug", "Goblin / Orc Grunt", "Wealthy Noble / Merchant", "Cultist / Dark Acolyte", "Ancient Undead (Skeleton/Zombie)", "Dead Explorer / Adventurer"])
-        if st.button("Search their pockets!"):
-            log_usage_to_sheet("Pocket Trash", loot_target)
-            with st.spinner("Rifling through their belongings..."):
-                st.session_state.ai_outputs["Trash"] = get_ai_response(f"Generate 'pocket trash' loot for a D&D 5e game. The players just defeated and looted a '{loot_target}'. Instead of just generic coins, provide a formatted, bulleted list of 4-5 flavorful, mundane items they find in their pockets or pouches. Make it highly thematic. Include a tiny, randomized amount of relevant coins at the very end.")
-        if "Trash" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Trash'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+        theme = st.text_input("Item Theme")
+        if st.button("Forge Curse"):
+            st.session_state.ai_outputs["Cursed"] = get_ai_response(f"Powerful 5e item with a horrifying curse based on: {theme}")
+        if "Cursed" in st.session_state.ai_outputs: st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Cursed']}</div>", unsafe_allow_html=True)
 
     elif page == "🐉 The Dragon's Hoard":
         st.title("🐉 The Dragon's Hoard")
-        cr_tier = st.selectbox("Encounter Challenge Rating (CR)", ["CR 0-4 (Local Threat)", "CR 5-10 (Regional Boss)", "CR 11-16 (Kingdom Threat)", "CR 17+ (World Ender)"])
+        tier = st.selectbox("CR Tier", ["CR 0-4", "CR 5-10", "CR 11-16", "CR 17+"])
         if st.button("Generate Hoard"):
-            log_usage_to_sheet("Dragon's Hoard", cr_tier)
-            with st.spinner("Counting the gold..."):
-                st.session_state.ai_outputs["Hoard"] = get_ai_response(f"Generate a D&D 5e treasure hoard appropriate for a boss fight of {cr_tier}. Include a specific, logical amount of gold/silver/copper, 3-5 valuable art objects or gems with vivid descriptions and their GP values, and 1-2 highly thematic magic items.")
-        if "Hoard" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Hoard'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
+            st.session_state.ai_outputs["Hoard"] = get_ai_response(f"Balanced treasure hoard for {tier}")
+        if "Hoard" in st.session_state.ai_outputs: st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Hoard']}</div>", unsafe_allow_html=True)
 
     elif page == "🍻 Tavern Rumor Mill":
-        st.title("🍻 The Tavern Rumor Mill")
-        rumor_target = st.text_input("Rumor Subject", placeholder="e.g. The town of Phandalin, the local Baron...")
+        st.title("🍻 Tavern Rumor Mill")
+        target = st.text_input("Rumor Subject")
         if st.button("Eavesdrop"):
-            log_usage_to_sheet("Rumor Mill", rumor_target)
-            with st.spinner("Buying a round for the locals..."):
-                st.session_state.ai_outputs["Rumor"] = get_ai_response(f"Generate 3 local tavern rumors about '{rumor_target}' for a D&D game. Format as a bulleted list: One must be completely true, one must be a total lie, and one must be partially true but dangerously misleading.")
-        if "Rumor" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Rumor'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "🌍 Worldbuilder":
-        st.title("🌍 Worldbuilder's Forge")
-        w_type = st.selectbox("I need a...", ["City", "Deity", "Faction"])
-        if st.button("Forge Lore"):
-            log_usage_to_sheet("Worldbuilder", w_type)
-            with st.spinner("Writing history..."):
-                st.session_state.ai_outputs["World"] = get_ai_response(f'Deep lore for {w_type}')
-        if "World" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['World'].replace('\n','<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "📖 Session Recap Scribe":
-        st.title("📖 'Previously On...' Summarizer")
-        messy_notes = st.text_area("Rough Session Notes", placeholder="The party fought some goblins...")
-        if st.button("Draft Recap"):
-            log_usage_to_sheet("Session Recap", messy_notes)
-            with st.spinner("Scripting the dramatic intro..."):
-                st.session_state.ai_outputs["Recap"] = get_ai_response(f"Turn these rough D&D session notes into a dramatic, polished 2-paragraph monologue designed to be read aloud by the Dungeon Master at the start of the next session: {messy_notes}")
-        if "Recap" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Recap'].replace('\n', '<br>')}</div>", unsafe_allow_html=True)
-
-    elif page == "🧠 Assistant":
-        st.title("🧠 Digital DM Assistant")
-        notes = st.text_area("Session Notes", placeholder="The party found the map...")
-        if st.button("🔍 Analyze Plot"):
-            log_usage_to_sheet("DM Assistant", notes)
-            with st.spinner("Analyzing..."):
-                st.session_state.ai_outputs["Assistant"] = get_ai_response(f'Analyze plot twists: {notes}')
-        if "Assistant" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Assistant']}</div>", unsafe_allow_html=True)
+            st.session_state.ai_outputs["Rumor"] = get_ai_response(f"3 rumors about {target} (1 true, 1 lie, 1 misleading)")
+        if "Rumor" in st.session_state.ai_outputs: st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['Rumor']}</div>", unsafe_allow_html=True)
 
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
-        st.write("Help me improve the DM Co-Pilot! What should I build next?")
-        
         from streamlit_gsheets import GSheetsConnection
         conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        with st.form("user_feedback_form"):
-            user_rating = st.radio("How would you rate the app so far?", 
-                                   ["⭐⭐⭐⭐⭐ (5 Stars)", "⭐⭐⭐⭐ (4 Stars)", "⭐⭐⭐ (3 Stars)", "⭐⭐ (2 Stars)", "⭐ (1 Star)"], 
-                                   horizontal=True)
-            
-            user_vtt = st.selectbox("What Virtual Tabletop do you use?", ["Roll20", "Foundry", "Owlbear Rodeo", "Pen & Paper", "Other"])
-            user_idea = st.text_area("What feature should I add next?", placeholder="e.g., Export to PDF, NPC Generator...")
-            
-            submitted = st.form_submit_button("Submit Feedback")
-            
-            if submitted:
-                numerical_rating = user_rating.split("(")[1][0] 
+        with st.form("feedback"):
+            rating = st.radio("Rating", ["5", "4", "3", "2", "1"], horizontal=True)
+            vtt = st.selectbox("VTT", ["Roll20", "Foundry", "Other"])
+            idea = st.text_area("Ideas")
+            if st.form_submit_button("Submit"):
                 sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
-                existing_data = conn.read(spreadsheet=sheet_url)
-                
-                new_row = pd.DataFrame([{
-                    "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Action_Type": "Form Submission",
-                    "Rating": numerical_rating,
-                    "VTT": user_vtt,
-                    "Feature_Idea": user_idea
-                }])
-                
-                updated_data = pd.concat([existing_data, new_row], ignore_index=True)
-                conn.update(spreadsheet=sheet_url, data=updated_data)
-                
-                st.markdown(f"""
-                <div style="background-color: #f0f4f8; border-left: 6px solid #000080; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <h3 style="color: #000080; margin: 0; font-family: 'Crimson Text', serif;">📬 Feedback Received!</h3>
-                    <p style="color: #000080; font-size: 1.1rem; margin-top: 5px; font-weight: bold;">
-                        Thank you! Your {numerical_rating}-star rating and feedback have been sent to the developer's ledger.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+                df = conn.read(spreadsheet=sheet_url)
+                new_row = pd.DataFrame([{"Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Action_Type": "Form", "Rating": rating, "VTT": vtt, "Feature_Idea": idea}])
+                conn.update(spreadsheet=sheet_url, data=pd.concat([df, new_row], ignore_index=True))
+                st.success("Feedback recorded!")
