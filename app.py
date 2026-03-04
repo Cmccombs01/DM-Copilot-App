@@ -109,6 +109,32 @@ if 'last_roll' not in st.session_state:
 if 'error_log' not in st.session_state:
     st.session_state.error_log = []
 
+# --- 📊 BACKGROUND DATA LOGGER ---
+def log_usage_to_sheet(tool_name, user_input):
+    """Silently logs app usage data to the Google Sheet for analysis"""
+    try:
+        from streamlit_gsheets import GSheetsConnection
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
+        
+        # Read the current sheet
+        existing_data = conn.read(spreadsheet=sheet_url)
+        
+        # Create a new row of data. Pandas will automatically create new columns if they don't exist!
+        new_row = pd.DataFrame([{
+            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Action_Type": "Tool Usage",
+            "Tool_Used": tool_name,
+            "User_Input": str(user_input)
+        }])
+        
+        # Append and update
+        updated_data = pd.concat([existing_data, new_row], ignore_index=True)
+        conn.update(spreadsheet=sheet_url, data=updated_data)
+    except Exception as e:
+        logger.error(f"Failed to log to GSheets: {e}")
+        pass # If it fails, we silently pass so the user doesn't see an error
+
 # --- ANALYTICS ---
 with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_password", "local_test_password")):
 
@@ -130,7 +156,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.markdown("---")
     
-    # --- NAVIGATION MENU (Added Pocket Trash) ---
+    # --- NAVIGATION MENU ---
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
@@ -148,7 +174,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
     
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
 
-    # --- 🗳️ UPDATED POLL (Removed Pocket Trash, added Tavern Rumors) ---
+    # --- 🗳️ DYNAMIC SIDEBAR POLL ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗳️ Community Poll")
     poll_choice = st.sidebar.radio(
@@ -183,6 +209,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your campaign summary and what you're looking for in a player. The AI will evaluate the 'vibe' and help you decide if a player is a good fit for your table.</div>""", unsafe_allow_html=True)
         pitch = st.text_area("The DM's Pitch & Player Preferences", placeholder="e.g. A dark gothic horror game for 4 players...")
         if st.button("Analyze Compatibility"):
+            log_usage_to_sheet("Matchmaker", pitch)
             res = get_ai_response(f'Analyze: {pitch}')
             st.markdown(f"<div class='stat-card'>{res}</div>", unsafe_allow_html=True)
             if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
@@ -197,6 +224,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         h_name = st.text_input("Monster Name", placeholder="e.g. Lava Drake", help="Type any creature name here!")
         
         if st.button("Generate Stat Block"):
+            log_usage_to_sheet("Encounter Architect", h_name)
             with st.spinner("Forging the monster..."):
                 res = get_ai_response(f"Generate a 5e stat block for {h_name}")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -236,6 +264,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             if not trap_theme:
                 st.warning("⚠️ Please enter a theme or location first!")
             else:
+                log_usage_to_sheet("Trap Architect", f"{trap_type} in {trap_theme}")
                 with st.spinner(f"Setting the mechanisms for the {trap_type.lower()}..."):
                     res = get_ai_response(f"Design a clever D&D 5e {trap_type.lower()} for a '{trap_theme}' setting. Include: 1) A flavorful description for the DM to read aloud. 2) The Mechanics (triggers, DC checks, damage, or the riddle text). 3) Three Tiered Hints the DM can hand out if players get stuck. 4) The clear, logical solution.")
                     st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -246,6 +275,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Enter a profession or basic concept. The AI will instantly generate a named character with a unique quirk, a hidden secret, and a voice prompt for you to act out.</div>""", unsafe_allow_html=True)
         npc_concept = st.text_input("NPC Concept", placeholder="e.g. A suspicious tavern keeper, or a nervous goblin merchant...")
         if st.button("Forge NPC"):
+            log_usage_to_sheet("NPC Quick-Forge", npc_concept)
             with st.spinner("Breathing life into the NPC..."):
                 res = get_ai_response(f"Create a memorable D&D 5e NPC based on this concept: '{npc_concept}'. Include a creative Name, a distinct Physical Quirk, a Secret they are hiding, a specific Voice/Mannerism prompt for the DM to act out, and their general Disposition.")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -257,6 +287,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         h_style = st.selectbox("Style", ["Bounty Poster", "King's Decree", "Torn Journal", "Mystic Prophecy"])
         msg = st.text_input("Core Hook", placeholder="Wanted for stealing the Duke's ring...")
         if st.button("Forge Document"):
+            log_usage_to_sheet("Scribe Handouts", f"{h_style} - {msg}")
             res = get_ai_response(f"Write a flavorful {h_style}: {msg}")
             st.markdown(f"<div class='handout-card'><h3 style='text-align:center;'>{h_style.upper()}</h3><hr>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
             if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
@@ -278,6 +309,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             elif not item_theme:
                 st.warning("⚠️ Please enter a theme for the magic item.")
             else:
+                log_usage_to_sheet("Magic Item Artificer", f"Feedback: {toll_feedback} | Theme: {item_theme}")
                 st.success("Toll accepted! Your feedback has been sent to the developer's ledger. Forging your item...")
                 with st.spinner("Enchanting the artifact..."):
                     res = get_ai_response(f"Create a unique 5e magic item based on this theme: {item_theme}. Include a cool name, mechanical 5e stats, physical description, and a snippet of deep lore.")
@@ -289,12 +321,12 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Select a shop type. The AI will generate a shop name, a quirky proprietor, and a formatted inventory table complete with gold piece prices.</div>""", unsafe_allow_html=True)
         shop_type = st.selectbox("Shop Type", ["General Store", "Apothecary / Potions", "Black Market / Fence", "Magic Item Broker", "Weaponsmith"])
         if st.button("Generate Shop"):
+            log_usage_to_sheet("Shop Generator", shop_type)
             with st.spinner("Stocking the shelves..."):
                 res = get_ai_response(f"Generate a '{shop_type}' for a D&D 5e game. Include a creative Shop Name, a brief description of the quirky shopkeeper, and a formatted table of 5-7 thematic items for sale with their gold piece prices.")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
                 if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
 
-    # --- NEW FEATURE: POCKET TRASH LOOT ---
     elif page == "🎒 'Pocket Trash' Loot":
         st.title("🎒 'Pocket Trash' Loot Generator")
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Select who the players just looted. The AI will generate a handful of flavorful, mundane items to give the world depth, instead of just handing out '2 gold pieces'.</div>""", unsafe_allow_html=True)
@@ -302,6 +334,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         loot_target = st.selectbox("Who (or what) was looted?", ["Common Bandit / Thug", "Goblin / Orc Grunt", "Wealthy Noble / Merchant", "Cultist / Dark Acolyte", "Ancient Undead (Skeleton/Zombie)", "Dead Explorer / Adventurer"])
         
         if st.button("Search their pockets!"):
+            log_usage_to_sheet("Pocket Trash", loot_target)
             with st.spinner("Rifling through their belongings..."):
                 res = get_ai_response(f"Generate 'pocket trash' loot for a D&D 5e game. The players just defeated and looted a '{loot_target}'. Instead of just generic coins, provide a formatted, bulleted list of 4-5 flavorful, mundane items they find in their pockets or pouches (e.g., a carved wooden pipe, a half-eaten block of cheese, a strange love letter). Make it highly thematic to the creature type. Include a tiny, randomized amount of relevant coins at the very end.")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -312,6 +345,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Select what you need and the AI will generate deep, flavorful history to flesh out your world.</div>""", unsafe_allow_html=True)
         w_type = st.selectbox("I need a...", ["City", "Deity", "Faction"])
         if st.button("Forge Lore"):
+            log_usage_to_sheet("Worldbuilder", w_type)
             res = get_ai_response(f'Deep lore for {w_type}')
             st.markdown(f"<div class='stat-card'>{res.replace('\n','<br>')}</div>", unsafe_allow_html=True)
             if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
@@ -321,6 +355,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your messy, bullet-point notes from your last game. The AI will rewrite them into a dramatic, polished monologue designed to be read aloud to hype up the players.</div>""", unsafe_allow_html=True)
         messy_notes = st.text_area("Rough Session Notes", placeholder="The party fought some goblins, Bob almost died to a trap, they found a glowing sword...")
         if st.button("Draft Recap"):
+            log_usage_to_sheet("Session Recap", messy_notes)
             with st.spinner("Scripting the dramatic intro..."):
                 res = get_ai_response(f"Turn these rough D&D session notes into a dramatic, polished 2-paragraph monologue designed to be read aloud by the Dungeon Master at the start of the next session to hype up the players: {messy_notes}")
                 st.markdown(f"<div class='stat-card'>{res.replace('\n', '<br>')}</div>", unsafe_allow_html=True)
@@ -331,6 +366,7 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
         st.markdown("""<div class='instruction-box'><b>How to use:</b> Paste your notes or ideas. The AI will act as your co-writer, identifying plot holes or suggesting twists.</div>""", unsafe_allow_html=True)
         notes = st.text_area("Session Notes", placeholder="The party found the map, but killed the NPC who could read it...")
         if st.button("🔍 Analyze Plot"):
+            log_usage_to_sheet("DM Assistant", notes)
             res = get_ai_response(f'Analyze plot twists: {notes}')
             st.markdown(f"<div class='stat-card'>{res}</div>", unsafe_allow_html=True)
             if not res.startswith("❌") and not res.startswith("⚠️"): st.feedback("faces")
@@ -355,10 +391,11 @@ with streamlit_analytics.track(unsafe_password=st.secrets.get("analytics_passwor
             if submitted:
                 numerical_rating = user_rating.split("(")[1][0] 
                 sheet_url = "https://docs.google.com/spreadsheets/d/1g6GRCspt8pIEaUpbGdUruiZu8X3wpOIDJNGr9O1lVBo/edit"
-                existing_data = conn.read(spreadsheet=sheet_url, usecols=[0, 1, 2, 3])
+                existing_data = conn.read(spreadsheet=sheet_url)
                 
                 new_row = pd.DataFrame([{
                     "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Action_Type": "Form Submission",
                     "Rating": numerical_rating,
                     "VTT": user_vtt,
                     "Feature_Idea": user_idea
