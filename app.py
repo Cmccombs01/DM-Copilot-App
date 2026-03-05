@@ -6,8 +6,6 @@ from datetime import datetime
 import os
 
 # --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
-# This prevents the "dictionary changed size during iteration" crash 
-# when hundreds of users are clicking buttons at the same time!
 import streamlit_analytics2.display as sa2_display
 if not hasattr(sa2_display, "original_show_results"):
     sa2_display.original_show_results = sa2_display.show_results
@@ -42,7 +40,6 @@ if is_analytics:
             fill: #00FF00 !important;
         }
         
-        /* Analytics Button Override */
         .stButton>button { 
             background-color: #000000 !important; 
             color: #00FF00 !important; 
@@ -62,7 +59,7 @@ if is_analytics:
         """, unsafe_allow_html=True)
 
 else:
-    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR & BUTTONS) ---
+    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR) ---
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
@@ -73,7 +70,6 @@ else:
             background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
         }
         
-        /* Target ONLY the main area for the Maroon text */
         [data-testid="stAppViewContainer"] p, 
         [data-testid="stAppViewContainer"] span, 
         [data-testid="stAppViewContainer"] label, 
@@ -96,7 +92,6 @@ else:
             border-right: 3px solid #00FF00 !important; 
         }
         
-        /* Explicitly force every text element inside the sidebar to be Hacker Green */
         [data-testid="stSidebar"] p,
         [data-testid="stSidebar"] span,
         [data-testid="stSidebar"] label,
@@ -109,7 +104,16 @@ else:
             font-weight: bold !important;
         }
 
-        /* 3. Output Cards & Inputs (Main Area) */
+        /* 3. THE FIX: Make Radio Buttons Visible in Sidebar */
+        [data-testid="stSidebar"] div[role="radio"] > div:first-child {
+            border: 2px solid #00FF00 !important;
+            background-color: #000000 !important;
+        }
+        [data-testid="stSidebar"] div[role="radio"][aria-checked="true"] > div:first-child {
+            background-color: #00FF00 !important;
+        }
+
+        /* 4. Output Cards & Inputs (Main Area) */
         .stat-card { 
             background-color: rgba(255, 255, 255, 0.95) !important; 
             border: 1px solid #d1d1d1 !important; 
@@ -127,7 +131,7 @@ else:
             border-radius: 4px !important;
         }
         
-        /* THE BUTTON FIX: Black background, Hacker Green text and borders */
+        /* 5. Terminal Buttons */
         .stButton>button { 
             background-color: #000000 !important; 
             color: #00FF00 !important; 
@@ -246,7 +250,6 @@ with streamlit_analytics.track():
             if os.path.exists("telemetry_feedback.csv"):
                 df_feedback = pd.read_csv("telemetry_feedback.csv")
                 
-                # FIX: Replaced use_container_width with width="stretch"
                 st.dataframe(df_feedback, width="stretch")
                 
                 csv = df_feedback.to_csv(index=False).encode('utf-8')
@@ -291,5 +294,4 @@ with streamlit_analytics.track():
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs[page]}</div>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
-    # FIX: Replaced use_container_width with width="stretch"
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", width="stretch")
