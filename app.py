@@ -14,53 +14,53 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (CROSS-BROWSER FIX) ---
-# This version ensures Edge and Firefox respect the Parchment & Crimson theme
+# --- 🏰 THEMED UI (CROSS-BROWSER & CONTRAST FIX) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
     
-    /* Force Parchment Background for Chrome, Edge, and Firefox */
     [data-testid="stAppViewContainer"] {
         background-color: #f4ecd8 !important;
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    /* Transparent Header/Toolbar */
     [data-testid="stHeader"], [data-testid="stToolbar"] {
         background-color: rgba(0,0,0,0) !important;
     }
 
-    /* Global Text Color: Deep Crimson */
     html, body, [class*="st-"] {
         color: #4a0404 !important;
         font-family: 'Crimson Text', serif;
     }
 
-    /* Sidebar Styling: Deep Maroon/Dark Leather */
     [data-testid="stSidebar"] {
         background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
         background-color: #2e0808 !important;
         border-right: 3px solid #d4af37;
     }
     
-    /* Sidebar Text: Force White for contrast on all browsers */
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
         color: #ffffff !important;
     }
 
-    /* Input Fields: Fix for Firefox "White-on-White" text bug */
-    input, select, textarea {
+    /* Fix for "Select Rarity" box - High Contrast for Edge/Firefox */
+    div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         color: #000000 !important;
         border: 1px solid #4a0404 !important;
     }
 
-    /* Specialized Cards */
+    div[role="listbox"] ul {
+        background-color: #ffffff !important;
+    }
+    
+    div[role="option"] {
+        color: #000000 !important;
+    }
+
     .stat-card { background-color: #ffffff; border: 1px solid #d1d1d1; padding: 20px; border-radius: 8px; border-left: 10px solid #b22222; margin-bottom: 20px; color: #1a1a1a; }
     .handout-card { background-color: #fdf6e3; background-image: url("https://www.transparenttextures.com/patterns/parchment.png"); border: 2px solid #5d4037; padding: 30px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); color: #2c1b0e !important; }
     
-    /* Buttons: Crimson themed */
     .stButton>button { 
         background-color: #b22222 !important; 
         color: white !important; 
@@ -77,7 +77,6 @@ st.markdown("""
 
 # --- ⚖️ RECHARGE TIER LOGIC ---
 def get_item_balance_rules(rarity):
-    """Returns strict balancing rules based on item rarity for the LLM."""
     tiers = {
         "Common": "1 charge, no recharge. Minor flavor effect only.",
         "Uncommon": "Max 3 charges. Regains 1d3 charges at dawn. Level 1-2 spell power.",
@@ -110,16 +109,6 @@ def get_ai_response(prompt, llm_provider, user_api_key):
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-# --- TOOL FUNCTIONS ---
-def generic_ai_tool(title, prompt_prefix, input_label, output_key, llm, key_val):
-    st.title(title)
-    user_val = st.text_input(input_label, key=f"in_{output_key}")
-    if st.button(f"Generate {title}", key=f"btn_{output_key}"):
-        with st.spinner("Consulting the Grimoire..."):
-            st.session_state.ai_outputs[output_key] = get_ai_response(f"{prompt_prefix}: {user_val}", llm, key_val)
-    if output_key in st.session_state.ai_outputs:
-        st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs[output_key]}</div>", unsafe_allow_html=True)
-
 # --- MAIN APP ---
 with streamlit_analytics.track():
     st.sidebar.markdown("<h2 style='text-align: center; color: #d4af37;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
@@ -138,15 +127,35 @@ with streamlit_analytics.track():
         "📖 Session Recap Scribe", "🧠 Assistant", "📫 Give Feedback"
     ])
 
-    # --- ROUTING LOGIC ---
+    # --- ROUTING LOGIC WITH INSTRUCTIONS ---
+    
     if page == "🤝 Matchmaker":
-        generic_ai_tool("🤝 Campaign Matchmaker", "Analyze D&D campaign compatibility for", "Pitch/Preferences", "match", llm_provider, user_api_key)
+        st.title("🤝 Campaign Matchmaker")
+        with st.expander("📜 How to use"):
+            st.write("Enter your campaign pitch and player preferences. The AI will analyze compatibility and generate 3 custom 'Hooks' to get your group excited.")
+        
+        user_val = st.text_input("Pitch/Preferences", placeholder="e.g. High fantasy, political intrigue, players want to be pirates")
+        if st.button("Generate Matchmaker"):
+            st.session_state.ai_outputs["match"] = get_ai_response(f"Analyze D&D campaign compatibility for: {user_val}", llm_provider, user_api_key)
+        if "match" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['match']}</div>", unsafe_allow_html=True)
     
     elif page == "⚔️ Encounter Architect":
-        generic_ai_tool("⚔️ Encounter Architect", "Create a balanced D&D 5e combat encounter for", "Party Level/Theme", "encounter", llm_provider, user_api_key)
+        st.title("⚔️ Encounter Architect")
+        with st.expander("📜 How to use"):
+            st.write("Input the party's level and the encounter theme. The AI will build a balanced combat encounter with monsters, terrain hazards, and tactical advice.")
+        
+        user_val = st.text_input("Party Level/Theme")
+        if st.button("Generate Encounter"):
+            st.session_state.ai_outputs["encounter"] = get_ai_response(f"Create a balanced D&D 5e encounter for: {user_val}", llm_provider, user_api_key)
+        if "encounter" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['encounter']}</div>", unsafe_allow_html=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Procedural Map Generator")
+        with st.expander("📜 How to use"):
+            st.write("Choose your grid size and hit generate. This tool uses a random seed to create a tactical 'Dungeon Matrix'. ⬛ = Wall, ⬜ = Floor.")
+        
         size = st.slider("Map Size", 5, 15, 8)
         if st.button("Generate Dungeon"):
             grid = [["⬛" if random.random() < 0.3 else "⬜" for _ in range(size)] for _ in range(size)]
@@ -157,79 +166,54 @@ with streamlit_analytics.track():
 
     elif page == "📖 Spellbook Analytics":
         st.title("📖 Spellbook Analytics")
-        st.info("Upload a spell CSV or view sample trends.")
-        data = pd.DataFrame({"School": ["Evocation", "Necromancy", "Abjuration"], "Count": [10, 5, 8]})
-        st.altair_chart(alt.Chart(data).mark_bar().encode(x='School', y='Count'))
+        with st.expander("📜 How to use"):
+            st.write("Upload a CSV of your spells (Name, School, Level) to see a visual breakdown of your magic schools. If no file is uploaded, sample trends are shown.")
+        
+        uploaded_file = st.file_uploader("Upload a spell CSV", type="csv")
+        df = pd.read_csv(uploaded_file) if uploaded_file else pd.DataFrame({"School": ["Evoc", "Necro", "Abjur"], "Count": [12, 5, 8]})
+        
+        chart = alt.Chart(df).mark_bar(color='#b22222').encode(x='School', y='Count', tooltip=['School', 'Count']).properties(height=400)
+        st.altair_chart(chart, use_container_width=True)
 
-    elif page == "🏙️ Instant City Generator":
-        generic_ai_tool("🏙️ Instant City Generator", "Generate a detailed fantasy city layout including districts and 3 points of interest for", "City Name/Climate", "city", llm_provider, user_api_key)
-
-    elif page == "🧩 Trap Architect":
-        generic_ai_tool("🧩 Trap Architect", "Design a complex D&D 5e trap including trigger, effect, and countermeasure for", "Trap Level/Theme", "trap", llm_provider, user_api_key)
-
-    elif page == "🎭 NPC Quick-Forge":
-        generic_ai_tool("🎭 NPC Quick-Forge", "Generate a D&D NPC with a name, quirk, and secret for", "NPC Concept", "npc", llm_provider, user_api_key)
+    elif page == "💎 Magic Item Artificer":
+        st.title("💎 Magic Item Artificer")
+        with st.expander("📜 How to use"):
+            st.write("Define a theme and select a rarity. The 'Masterwork' logic ensures the item's charges and power levels are mechanically balanced for D&D 5e.")
+        
+        item_theme = st.text_input("Item Name/Type", key="magic_item_theme")
+        rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
+        
+        if st.button("Forge Magic Item"):
+            balance = get_item_balance_rules(rarity_choice)
+            prompt = f"Design a {rarity_choice} D&D 5e magic item: {item_theme}. RULES: {balance}"
+            st.session_state.ai_outputs["magic_item"] = get_ai_response(prompt, llm_provider, user_api_key)
+        if "magic_item" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
     elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
+        with st.expander("📜 How to use"):
+            st.write("Pick a style and a plot hook. The Scribe will write the text and use AI to generate a matching visual reference for your players.")
+        
         h_style = st.selectbox("Style", ["Wanted Poster", "King's Decree", "Torn Journal Page"])
         msg = st.text_input("Core Hook")
         if st.button("Generate Handout"):
-            res = get_ai_response(f"Write a {h_style} about {msg}", llm_provider, user_api_key)
-            st.session_state.ai_outputs["handout_text"] = res
+            st.session_state.ai_outputs["handout_text"] = get_ai_response(f"Write a {h_style} about {msg}", llm_provider, user_api_key)
             st.session_state.ai_outputs["handout_img"] = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(msg)}?width=512&height=512"
         if "handout_text" in st.session_state.ai_outputs:
             st.markdown(f"<div class='handout-card'><h3>{h_style.upper()}</h3><img src='{st.session_state.ai_outputs['handout_img']}' width='100%'/><br>{st.session_state.ai_outputs['handout_text']}</div>", unsafe_allow_html=True)
 
-    elif page == "💎 Magic Item Artificer":
-        st.title("💎 Magic Item Artificer")
-        item_theme = st.text_input("Item Name/Type", placeholder="e.g. A flaming greatsword", key="magic_item_theme")
-        rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
+    # --- ALL OTHER TOOLS (GENERIC PATTERN) ---
+    else:
+        st.title(f"{page}")
+        with st.expander("📜 How to use"):
+            st.write(f"The {page} uses LLM inference to generate lore and mechanics. Simply input your prompt and click generate.")
         
-        # Pull in the new Recharge Tier Logic
-        balance_instructions = get_item_balance_rules(rarity_choice)
-        
-        if st.button("Forge Magic Item", key="btn_magic_item"):
-            with st.spinner("Enchanting the artifact..."):
-                prompt = f"""
-                Design a {rarity_choice} D&D 5e magic item based on this theme: {item_theme}.
-                STRICT BALANCING RULES: {balance_instructions}
-                Include Name, Rarity, Description, Mechanics, and Attunement requirement.
-                """
-                st.session_state.ai_outputs["magic_item"] = get_ai_response(prompt, llm_provider, user_api_key)
-        
-        if "magic_item" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
-
-    elif page == "💀 Cursed Item Creator":
-        generic_ai_tool("💀 Cursed Item Creator", "Design a magic item with a debilitating but thematic curse for", "Item Theme", "curse", llm_provider, user_api_key)
-
-    elif page == "💰 Dynamic Shop Generator":
-        generic_ai_tool("💰 Dynamic Shop Generator", "Generate a shop inventory with names, descriptions, and gold costs for", "Shop Type (e.g. Alchemist)", "shop", llm_provider, user_api_key)
-
-    elif page == "🎒 'Pocket Trash' Loot":
-        generic_ai_tool("🎒 'Pocket Trash' Loot", "List 5 weird, non-magical items found in the pockets of", "Target Creature", "trash", llm_provider, user_api_key)
-
-    elif page == "🐉 The Dragon's Hoard":
-        generic_ai_tool("🐉 The Dragon's Hoard", "Generate a massive treasure hoard including gold, gems, and art for", "Hoard CR Tier", "hoard", llm_provider, user_api_key)
-
-    elif page == "🍻 Tavern Rumor Mill":
-        generic_ai_tool("🍻 Tavern Rumor Mill", "Provide 3 rumors (1 true, 1 false, 1 misleading) about", "Location/Person", "rumors", llm_provider, user_api_key)
-
-    elif page == "🌍 Worldbuilder":
-        generic_ai_tool("🌍 Worldbuilder", "Describe a unique fantasy continent with history and geography for", "World Theme", "world", llm_provider, user_api_key)
-
-    elif page == "📖 Session Recap Scribe":
-        generic_ai_tool("📖 Session Recap Scribe", "Turn these rough notes into a dramatic narrative session recap:", "DM Notes", "recap", llm_provider, user_api_key)
-
-    elif page == "🧠 Assistant":
-        generic_ai_tool("🧠 Assistant", "You are a master DM assistant. Answer this query:", "Ask anything...", "assistant", llm_provider, user_api_key)
-
-    elif page == "📫 Give Feedback":
-        st.title("📫 Tavern Suggestion Box")
-        st.text_area("What features should we add next?")
-        if st.button("Submit Feedback"):
-            st.success("The ravens have delivered your message!")
+        user_val = st.text_input("Input concept...")
+        if st.button("Generate"):
+            st.session_state.ai_outputs[page] = get_ai_response(f"Generate {page} content for: {user_val}", llm_provider, user_api_key)
+        if page in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs[page]}</div>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
