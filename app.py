@@ -59,100 +59,90 @@ if is_analytics:
         """, unsafe_allow_html=True)
 
 else:
-    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR) ---
+    # --- 🌌 MASTERWORK HACKER THEME (BLACK & NEON GREEN) ---
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
-        
-        /* 1. Main Content Area (Parchment) */
+        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+
+        /* 1. Main Background */
         [data-testid="stAppViewContainer"] {
-            background-color: #f4ecd8 !important;
-            background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
+            background-color: #000000 !important;
+            background-image: none !important;
         }
-        
+
+        /* 2. Global Text & Headers */
         [data-testid="stAppViewContainer"] p, 
         [data-testid="stAppViewContainer"] span, 
         [data-testid="stAppViewContainer"] label, 
         [data-testid="stAppViewContainer"] li {
-            color: #1a0000 !important; 
-            font-family: 'Crimson Text', serif;
-            font-size: 1.05rem !important;
+            color: #00FF00 !important;
+            font-family: 'monospace', sans-serif !important;
         }
+
         [data-testid="stAppViewContainer"] h1, 
         [data-testid="stAppViewContainer"] h2, 
-        [data-testid="stAppViewContainer"] h3 { 
-            font-family: 'MedievalSharp', cursive; 
-            color: #800000 !important; 
+        [data-testid="stAppViewContainer"] h3 {
+            font-family: 'MedievalSharp', cursive;
+            color: #00FF00 !important;
+            text-shadow: 0 0 10px #00FF00;
         }
 
-        /* 2. Sidebar Navigation (Strict Black & Hacker Green) */
+        /* 3. Sidebar Navigation */
         [data-testid="stSidebar"] {
-            background-image: none !important;
-            background-color: #000000 !important; 
-            border-right: 3px solid #00FF00 !important; 
+            background-color: #000000 !important;
+            border-right: 2px solid #00FF00 !important;
         }
         
-        [data-testid="stSidebar"] p,
-        [data-testid="stSidebar"] span,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] div,
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3 {
+        [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
             color: #00FF00 !important;
-            font-family: monospace !important; 
-            font-weight: bold !important;
+            font-family: monospace !important;
         }
 
-       /* 3. THE FIX: Streamlit Base Web Radio Buttons */
+        /* 4. Radio Buttons */
         [data-testid="stSidebar"] div[data-baseweb="radio"] > div:first-child {
             background-color: #000000 !important;
             border: 2px solid #00FF00 !important;
         }
-        [data-testid="stSidebar"] div[data-baseweb="radio"] > div:first-child > div {
-            background-color: #00FF00 !important;
-        }
-        [data-testid="stSidebar"] div[role="radio"][aria-checked="true"] > div:first-child {
+        [data-testid="stSidebar"] div[data-baseweb="radio"] div[role="radio"][aria-checked="true"] > div:first-child {
             background-color: #00FF00 !important;
         }
 
-        /* 4. Output Cards & Inputs (Main Area) */
-        .stat-card { 
-            background-color: rgba(255, 255, 255, 0.95) !important; 
-            border: 1px solid #d1d1d1 !important; 
-            padding: 25px; 
-            border-radius: 8px; 
-            border-left: 8px solid #800000 !important; 
-            margin-bottom: 20px; 
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-            color: #000000 !important;
+        /* 5. Output Cards & Result Boxes */
+        .stat-card {
+            background-color: #0a0a0a !important;
+            border: 1px solid #00FF00 !important;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 10px solid #00FF00 !important;
+            color: #00FF00 !important;
+            font-family: monospace !important;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
+            margin-bottom: 20px;
         }
+
+        /* 6. Inputs & Text Areas */
         input, select, textarea, div[data-baseweb="select"] > div {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border: 1px solid #800000 !important;
-            border-radius: 4px !important;
+            background-color: #000000 !important;
+            color: #00FF00 !important;
+            border: 1px solid #00FF00 !important;
         }
-        
-        /* 5. Terminal Buttons */
-        .stButton>button { 
-            background-color: #000000 !important; 
-            color: #00FF00 !important; 
-            font-family: monospace !important; 
-            font-weight: bold !important;
-            width: 100%; 
-            border-radius: 5px;
+
+        /* 7. Action Buttons */
+        .stButton>button {
+            background-color: #000000 !important;
+            color: #00FF00 !important;
+            font-family: monospace !important;
             border: 2px solid #00FF00 !important;
-            font-size: 1.1rem !important;
+            width: 100%;
             transition: 0.3s;
         }
         .stButton>button:hover {
-            background-color: #00FF00 !important; 
-            color: #000000 !important; 
+            background-color: #00FF00 !important;
+            color: #000000 !important;
             border: 2px solid #000000 !important;
         }
         </style>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # --- ⚖️ RECHARGE TIER LOGIC ---
 def get_item_balance_rules(rarity):
@@ -298,3 +288,4 @@ with streamlit_analytics.track():
 
     st.sidebar.markdown("---")
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", width="stretch")
+
