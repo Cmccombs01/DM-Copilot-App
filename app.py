@@ -104,10 +104,13 @@ else:
             font-weight: bold !important;
         }
 
-        /* 3. THE FIX: Make Radio Buttons Visible in Sidebar */
-        [data-testid="stSidebar"] div[role="radio"] > div:first-child {
-            border: 2px solid #00FF00 !important;
+       /* 3. THE FIX: Streamlit Base Web Radio Buttons */
+        [data-testid="stSidebar"] div[data-baseweb="radio"] > div:first-child {
             background-color: #000000 !important;
+            border: 2px solid #00FF00 !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="radio"] > div:first-child > div {
+            background-color: #00FF00 !important;
         }
         [data-testid="stSidebar"] div[role="radio"][aria-checked="true"] > div:first-child {
             background-color: #00FF00 !important;
