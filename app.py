@@ -26,11 +26,28 @@ if is_analytics:
         svg text {
             fill: #00FF00 !important;
         }
+        
+        /* Analytics Button Override */
+        .stButton>button { 
+            background-color: #000000 !important; 
+            color: #00FF00 !important; 
+            font-family: monospace !important; 
+            font-weight: bold !important;
+            width: 100%; 
+            border-radius: 5px;
+            border: 2px solid #00FF00 !important;
+            font-size: 1.1rem !important;
+            transition: 0.3s;
+        }
+        .stButton>button:hover {
+            background-color: #00FF00 !important; 
+            color: #000000 !important; 
+        }
         </style>
         """, unsafe_allow_html=True)
 
 else:
-    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR) ---
+    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR & BUTTONS) ---
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
@@ -41,7 +58,7 @@ else:
             background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
         }
         
-        /* Target ONLY the main area for the Maroon text so it doesn't break the sidebar */
+        /* Target ONLY the main area for the Maroon text */
         [data-testid="stAppViewContainer"] p, 
         [data-testid="stAppViewContainer"] span, 
         [data-testid="stAppViewContainer"] label, 
@@ -57,7 +74,7 @@ else:
             color: #800000 !important; 
         }
 
-        /* 2. THE FIX: Sidebar Navigation (Strict Black & Hacker Green) */
+        /* 2. Sidebar Navigation (Strict Black & Hacker Green) */
         [data-testid="stSidebar"] {
             background-image: none !important;
             background-color: #000000 !important; 
@@ -95,19 +112,22 @@ else:
             border-radius: 4px !important;
         }
         
+        /* THE BUTTON FIX: Black background, Hacker Green text and borders */
         .stButton>button { 
-            background-color: #800000 !important; 
-            color: white !important; 
-            font-family: 'MedievalSharp', cursive; 
+            background-color: #000000 !important; 
+            color: #00FF00 !important; 
+            font-family: monospace !important; 
+            font-weight: bold !important;
             width: 100%; 
             border-radius: 5px;
-            border: 1px solid #ffd700 !important;
+            border: 2px solid #00FF00 !important;
             font-size: 1.1rem !important;
             transition: 0.3s;
         }
         .stButton>button:hover {
-            background-color: #b22222 !important; 
-            border: 1px solid #ffffff !important;
+            background-color: #00FF00 !important; 
+            color: #000000 !important; 
+            border: 2px solid #000000 !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -185,18 +205,17 @@ with streamlit_analytics.track():
         
         with st.container():
             st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
-            st.markdown("### Rate your experience!")
             
-            star_rating = st.feedback("stars")
+            # THE STAR FIX: Using a foolproof radio button selection instead of the experimental widget
+            star_rating = st.radio("### Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
             
             st.markdown("### Got an idea for a new tool?")
             user_feedback = st.text_area("What features should we add next?", height=100)
             
             if st.button("Submit Feedback"):
-                rating_val = star_rating + 1 if star_rating is not None else "No Rating"
                 new_data = pd.DataFrame({
                     "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                    "Stars": [rating_val],
+                    "Stars": [star_rating],
                     "Feedback": [user_feedback]
                 })
                 
