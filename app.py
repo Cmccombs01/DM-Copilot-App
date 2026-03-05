@@ -14,69 +14,64 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (MASTERWORK CONTRAST FIX) ---
+# --- 🏰 THEMED UI (MAX READABILITY FIX) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
     
-    /* Force Background & Text Visibility */
+    /* 1. Main Background */
     [data-testid="stAppViewContainer"] {
         background-color: #f4ecd8 !important;
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    /* Global Text Styling: Deeper Maroon for better contrast */
-    html, body, [class*="st-"], p, span {
-        color: #2e0808 !important; 
+    /* 2. Global Text: Deep black-maroon for contrast */
+    html, body, [class*="st-"], p, span, label {
+        color: #1a0000 !important; 
         font-family: 'Crimson Text', serif;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
     }
 
-    /* Header Contrast: Added a subtle shadow so it doesn't 'sink' into the map */
+    /* 3. Headers: High visibility with a clean shadow */
     h1, h2, h3 { 
         font-family: 'MedievalSharp', cursive; 
         color: #800000 !important;
-        text-shadow: 1px 1px 1px rgba(255,255,255,0.6); 
+        text-shadow: 2px 2px 2px rgba(255,255,255,1) !important; 
     }
 
-    /* Expander Text Fix (The 'How to Use' section) */
-    .st-expanderContent p {
-        color: #000000 !important; /* Pure black for readability */
-        background-color: rgba(255, 255, 255, 0.5) !important; /* Semi-transparent white backing */
-        padding: 10px !important;
-        border-radius: 5px;
+    /* 4. THE FIX: "How to Use" Box Readability */
+    .st-expanderContent {
+        background-color: #fff9e6 !important; /* Solid light paper color */
+        border: 2px solid #800000 !important;
+        padding: 20px !important;
+        border-radius: 10px;
+        box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .st-expanderContent p, .st-expanderContent li {
+        color: #000000 !important; /* Pure black text for instructions */
+        text-shadow: none !important;
+        font-size: 1.1rem !important;
+        line-height: 1.5 !important;
     }
 
-    /* Input & Select Box Visibility Fix */
+    /* 5. Input Boxes & Dropdowns */
     input, select, textarea, div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         color: #000000 !important;
         border: 2px solid #800000 !important;
     }
 
-    /* Sidebar Fixes */
+    /* 6. Sidebar Contrast */
     [data-testid="stSidebar"] {
         background-color: #2e0808 !important;
         border-right: 3px solid #d4af37;
     }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
         color: #ffffff !important;
-        text-shadow: none;
     }
 
-    .stat-card { background-color: #ffffff; border: 1px solid #d1d1d1; padding: 20px; border-radius: 8px; border-left: 10px solid #b22222; margin-bottom: 20px; color: #1a1a1a; }
-    .handout-card { background-color: #fdf6e3; background-image: url("https://www.transparenttextures.com/patterns/parchment.png"); border: 2px solid #5d4037; padding: 30px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); color: #2c1b0e !important; }
-    
-    .stButton>button { 
-        background-color: #b22222 !important; 
-        color: white !important; 
-        font-family: 'MedievalSharp', cursive; 
-        width: 100%; 
-        border-radius: 5px;
-        border: none !important;
-    }
-    
-    .dungeon-grid { font-size: 24px; line-height: 1.1; text-align: center; background-color: #2c3e50; padding: 20px; border-radius: 10px; border: 4px solid #b22222; }
+    .stat-card { background-color: #ffffff; border: 2px solid #800000; padding: 20px; border-radius: 8px; box-shadow: 3px 3px 10px rgba(0,0,0,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -84,10 +79,10 @@ st.markdown("""
 def get_item_balance_rules(rarity):
     tiers = {
         "Common": "1 charge, no recharge. Minor flavor effect only.",
-        "Uncommon": "Max 3 charges. Regains 1d3 charges at dawn. Level 1-2 spell power.",
-        "Rare": "Max 7 charges. Regains 1d6+1 charges at dawn. Level 3-4 spell power.",
-        "Very Rare": "Max 10 charges. Regains 1d8+2 charges at dawn. Level 5-6 spell power.",
-        "Legendary": "Max 20 charges. Regains 2d6+4 charges at dawn. Level 7+ spell power."
+        "Uncommon": "Max 3 charges. Regains 1d3 charges at dawn.",
+        "Rare": "Max 7 charges. Regains 1d6+1 charges at dawn.",
+        "Very Rare": "Max 10 charges. Regains 1d8+2 charges at dawn.",
+        "Legendary": "Max 20 charges. Regains 2d6+4 charges at dawn."
     }
     return tiers.get(rarity, "Standard 5e balancing applies.")
 
@@ -126,63 +121,28 @@ with streamlit_analytics.track():
     page = st.sidebar.radio("Navigation", [
         "🤝 Matchmaker", "⚔️ Encounter Architect", "🏰 Dungeon Map Generator",
         "📖 Spellbook Analytics", "🏙️ Instant City Generator", "🧩 Trap Architect",
-        "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer", 
-        "💀 Cursed Item Creator", "💰 Dynamic Shop Generator", "🎒 'Pocket Trash' Loot", 
-        "🐉 The Dragon's Hoard", "🍻 Tavern Rumor Mill", "🌍 Worldbuilder", 
-        "📖 Session Recap Scribe", "🧠 Assistant", "📫 Give Feedback"
+        "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer"
     ])
 
-    # --- TOOLS WITH INSTRUCTIONS ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        with st.expander("📜 How to use"):
-            st.write("Enter your campaign pitch and player preferences. The AI will analyze compatibility and generate 3 custom 'Hooks' to get your group excited.")
+        with st.expander("📜 How to use (Click to expand)"):
+            st.markdown("""
+            * **Step 1:** Enter your world concept (e.g., 'A desert world where water is gold').
+            * **Step 2:** List what your players like (e.g., 'Mystery and dungeon crawls').
+            * **Step 3:** Click generate to get 3 unique campaign hooks tailored to your group.
+            """)
         
-        user_val = st.text_input("Pitch/Preferences", placeholder="e.g. High fantasy, political intrigue, players want to be pirates")
+        user_val = st.text_input("Pitch/Preferences", placeholder="e.g. High fantasy, political intrigue")
         if st.button("Generate Matchmaker"):
             st.session_state.ai_outputs["match"] = get_ai_response(f"Analyze D&D campaign compatibility for: {user_val}", llm_provider, user_api_key)
         if "match" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['match']}</div>", unsafe_allow_html=True)
     
-    elif page == "⚔️ Encounter Architect":
-        st.title("⚔️ Encounter Architect")
-        with st.expander("📜 How to use"):
-            st.write("Input the party's level and the encounter theme. The AI will build a balanced combat encounter with monsters, terrain hazards, and tactical advice.")
-        
-        user_val = st.text_input("Party Level/Theme")
-        if st.button("Generate Encounter"):
-            st.session_state.ai_outputs["encounter"] = get_ai_response(f"Create a balanced D&D 5e encounter for: {user_val}", llm_provider, user_api_key)
-        if "encounter" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['encounter']}</div>", unsafe_allow_html=True)
-
-    elif page == "🏰 Dungeon Map Generator":
-        st.title("🏰 Procedural Map Generator")
-        with st.expander("📜 How to use"):
-            st.write("Choose your grid size and hit generate. This tool uses a random seed to create a tactical 'Dungeon Matrix'. ⬛ = Wall, ⬜ = Floor.")
-        
-        size = st.slider("Map Size", 5, 15, 8)
-        if st.button("Generate Dungeon"):
-            grid = [["⬛" if random.random() < 0.3 else "⬜" for _ in range(size)] for _ in range(size)]
-            grid[0][0], grid[size-1][size-1] = "🚪", "🐉"
-            st.session_state.ai_outputs["map_grid"] = f"<div class='dungeon-grid'>{'<br>'.join([''.join(row) for row in grid])}</div>"
-        if "map_grid" in st.session_state.ai_outputs:
-            st.markdown(st.session_state.ai_outputs["map_grid"], unsafe_allow_html=True)
-
-    elif page == "📖 Spellbook Analytics":
-        st.title("📖 Spellbook Analytics")
-        with st.expander("📜 How to use"):
-            st.write("Upload a CSV of your spells (Name, School, Level) to see a visual breakdown. If no file is uploaded, sample trends are shown.")
-        
-        uploaded_file = st.file_uploader("Upload a spell CSV", type="csv")
-        df = pd.read_csv(uploaded_file) if uploaded_file else pd.DataFrame({"School": ["Evoc", "Necro", "Abjur"], "Count": [12, 5, 8]})
-        
-        chart = alt.Chart(df).mark_bar(color='#b22222').encode(x='School', y='Count', tooltip=['School', 'Count']).properties(height=400)
-        st.altair_chart(chart, use_container_width=True)
-
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
         with st.expander("📜 How to use"):
-            st.write("Define a theme and select a rarity. The 'Masterwork' logic ensures the item's charges and power levels are mechanically balanced for D&D 5e.")
+            st.write("Pick a theme and a rarity. The AI will generate a unique item that follows official 5e recharge and power scaling rules.")
         
         item_theme = st.text_input("Item Name/Type", key="magic_item_theme")
         rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
@@ -194,11 +154,10 @@ with streamlit_analytics.track():
         if "magic_item" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
-    # --- ALL OTHER TOOLS (GENERIC PATTERN) ---
     else:
         st.title(f"{page}")
         with st.expander("📜 How to use"):
-            st.write(f"The {page} uses AI to generate lore and mechanics. Simply input your concept and click generate.")
+            st.write(f"Describe your concept for {page} and hit Generate. AI handles the mechanics and the lore.")
         
         user_val = st.text_input("Input concept...")
         if st.button("Generate"):
