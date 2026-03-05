@@ -122,11 +122,11 @@ with streamlit_analytics.track():
     
     st.sidebar.markdown("---")
     
-    # ADDED "DM's Guide" as the very first page
+    # Restored "📫 Give Feedback" to the Navigation
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", "🤝 Matchmaker", "⚔️ Encounter Architect", "🏰 Dungeon Map Generator",
         "📖 Spellbook Analytics", "🏙️ Instant City Generator", "🧩 Trap Architect",
-        "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer"
+        "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer", "📫 Give Feedback"
     ])
 
     # --- 1. THE NEW DEDICATED GUIDE PAGE ---
@@ -147,7 +147,17 @@ with streamlit_analytics.track():
         """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 2. CLEANED UP TOOLS (NO EXPANDERS) ---
+    # --- 2. THE RESTORED SUGGESTION BOX ---
+    elif page == "📫 Give Feedback":
+        st.title("📫 Tavern Suggestion Box")
+        st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
+        st.markdown("### Got an idea for a new tool?")
+        st.text_area("What features should we add next?", key="feedback_text")
+        if st.button("Submit Feedback"):
+            st.success("The ravens have delivered your message! Thank you for the feedback.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 3. CLEANED UP TOOLS (NO EXPANDERS) ---
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         user_val = st.text_input("Pitch/Preferences", placeholder="e.g. A desert world where water is gold, players like puzzles")
