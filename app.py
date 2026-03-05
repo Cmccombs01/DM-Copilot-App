@@ -14,75 +14,73 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (MAXIMUM READABILITY & CONTRAST FIX) ---
+# --- 🏰 THEMED UI (SOLID PAPER SHIELD FIX) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
     
-    /* 1. Main Background */
+    /* 1. App Background */
     [data-testid="stAppViewContainer"] {
         background-color: #f4ecd8 !important;
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    /* 2. Global Text Visibility: Pure Black and Bold for maximum contrast */
+    /* 2. Global Text: Sharp Maroon and Bold for visibility */
     html, body, [class*="st-"], p, span, label, li {
-        color: #000000 !important; 
+        color: #1a0000 !important; 
         font-family: 'Crimson Text', serif;
         font-weight: 700 !important; 
     }
 
-    /* 3. Headers: High visibility Crimson with a clean white backing */
+    /* 3. Headers: High visibility with white background glow */
     h1, h2, h3 { 
         font-family: 'MedievalSharp', cursive; 
         color: #800000 !important;
-        text-shadow: 2px 2px 0px rgba(255,255,255,1) !important; 
+        text-shadow: 2px 2px 0px white !important;
         background-color: rgba(255, 255, 255, 0.4);
-        padding: 10px;
-        border-radius: 8px;
+        padding: 5px 10px;
+        border-radius: 5px;
     }
 
-    /* 4. THE READABILITY FIX: "How to Use" & Help Boxes (Solid Opaque Paper) */
+    /* 4. THE FIX: Solid Paper Expander (No transparency) */
     .st-expanderContent {
-        background-color: #fffdf5 !important; 
+        background-color: #fffdf5 !important; /* Pure opaque paper color */
         border: 3px solid #800000 !important;
         padding: 25px !important;
-        border-radius: 12px;
-        box-shadow: 8px 8px 20px rgba(0,0,0,0.5);
+        border-radius: 10px;
+        box-shadow: 8px 8px 15px rgba(0,0,0,0.4);
     }
     
     .st-expanderContent p, .st-expanderContent li {
         color: #000000 !important; 
-        font-size: 1.25rem !important;
-        line-height: 1.6 !important;
         text-shadow: none !important;
+        font-size: 1.15rem !important;
+        line-height: 1.5 !important;
     }
 
-    /* 5. Input Boxes & Selectors: Opaque white with thick maroon borders */
+    /* 5. Input Boxes: Professional High-Contrast */
     input, select, textarea, div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         color: #000000 !important;
         border: 3px solid #800000 !important;
-        font-weight: bold !important;
     }
 
-    /* 6. Sidebar: High-Contrast White Text on Deep Crimson */
+    /* 6. Sidebar: High-Contrast White Text */
     [data-testid="stSidebar"] {
         background-color: #2e0808 !important;
         border-right: 4px solid #d4af37;
     }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
         color: #ffffff !important;
-        font-weight: bold !important;
     }
 
-    /* 7. Output Cards: Professional Stat Block look (No transparency) */
+    /* 7. Output Stat Cards */
     .stat-card { 
         background-color: #ffffff !important; 
         border: 3px solid #800000 !important; 
-        padding: 25px; 
-        border-radius: 12px; 
-        box-shadow: 6px 6px 25px rgba(0,0,0,0.3);
+        padding: 20px; 
+        border-radius: 8px; 
+        box-shadow: 4px 4px 10px rgba(0,0,0,0.2); 
         color: #000000 !important;
     }
     
@@ -90,10 +88,9 @@ st.markdown("""
         background-color: #b22222 !important; 
         color: white !important; 
         font-family: 'MedievalSharp', cursive; 
-        height: 3.2em;
+        height: 3em;
         border: 2px solid #ffd700 !important;
-        font-size: 1.2rem !important;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        font-size: 1.1rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -147,14 +144,14 @@ with streamlit_analytics.track():
         "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer"
     ])
 
-    # --- TOOLS WITH HIGH-VISIBILITY INSTRUCTIONS ---
+    # --- TOOLS WITH GUIDED INSTRUCTIONS ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        with st.expander("📜 How to use (Click for high-contrast guide)"):
+        with st.expander("📜 How to use (Click to expand)"):
             st.markdown("""
-            * **Step 1:** Enter your world concept (e.g. 'A Gothic horror city').
-            * **Step 2:** List what your players enjoy (e.g. 'Tactical combat and puzzles').
-            * **Step 3:** Click Generate to receive 3 tailored campaign hooks.
+            * **Step 1:** Enter your world concept (e.g., 'A flooded kingdom with clockwork cities').
+            * **Step 2:** List what your players like (e.g., 'They love tactical combat').
+            * **Step 3:** Click Generate to receive 3 unique campaign pitches.
             """)
         
         user_val = st.text_input("Pitch/Preferences", placeholder="e.g. High fantasy, political intrigue")
