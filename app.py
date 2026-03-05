@@ -14,19 +14,78 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI ---
+# --- 🏰 THEMED UI (CROSS-BROWSER FIX) ---
+# This version ensures Edge and Firefox respect the Parchment & Crimson theme
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
-    .stApp { background-image: url("https://www.transparenttextures.com/patterns/old-map.png"); background-color: #ffffff; font-family: 'Crimson Text', serif; color: #1a1a1a !important; }
-    [data-testid="stSidebar"] { background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png"); background-color: #252525; border-right: 3px solid #d4af37; }
+    
+    /* Force Parchment Background for Chrome, Edge, and Firefox */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f4ecd8 !important;
+        background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
+    }
+
+    /* Transparent Header/Toolbar */
+    [data-testid="stHeader"], [data-testid="stToolbar"] {
+        background-color: rgba(0,0,0,0) !important;
+    }
+
+    /* Global Text Color: Deep Crimson */
+    html, body, [class*="st-"] {
+        color: #4a0404 !important;
+        font-family: 'Crimson Text', serif;
+    }
+
+    /* Sidebar Styling: Deep Maroon/Dark Leather */
+    [data-testid="stSidebar"] {
+        background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
+        background-color: #2e0808 !important;
+        border-right: 3px solid #d4af37;
+    }
+    
+    /* Sidebar Text: Force White for contrast on all browsers */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+    }
+
+    /* Input Fields: Fix for Firefox "White-on-White" text bug */
+    input, select, textarea {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #4a0404 !important;
+    }
+
+    /* Specialized Cards */
     .stat-card { background-color: #ffffff; border: 1px solid #d1d1d1; padding: 20px; border-radius: 8px; border-left: 10px solid #b22222; margin-bottom: 20px; color: #1a1a1a; }
     .handout-card { background-color: #fdf6e3; background-image: url("https://www.transparenttextures.com/patterns/parchment.png"); border: 2px solid #5d4037; padding: 30px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); color: #2c1b0e !important; }
-    .stButton>button { background-color: #b22222 !important; color: white !important; font-family: 'MedievalSharp', cursive; width: 100%; }
+    
+    /* Buttons: Crimson themed */
+    .stButton>button { 
+        background-color: #b22222 !important; 
+        color: white !important; 
+        font-family: 'MedievalSharp', cursive; 
+        width: 100%; 
+        border-radius: 5px;
+        border: none !important;
+    }
+    
     h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #800000 !important; }
     .dungeon-grid { font-size: 24px; line-height: 1.1; text-align: center; background-color: #2c3e50; padding: 20px; border-radius: 10px; border: 4px solid #b22222; }
     </style>
     """, unsafe_allow_html=True)
+
+# --- ⚖️ RECHARGE TIER LOGIC ---
+def get_item_balance_rules(rarity):
+    """Returns strict balancing rules based on item rarity for the LLM."""
+    tiers = {
+        "Common": "1 charge, no recharge. Minor flavor effect only.",
+        "Uncommon": "Max 3 charges. Regains 1d3 charges at dawn. Level 1-2 spell power.",
+        "Rare": "Max 7 charges. Regains 1d6+1 charges at dawn. Level 3-4 spell power.",
+        "Very Rare": "Max 10 charges. Regains 1d8+2 charges at dawn. Level 5-6 spell power.",
+        "Legendary": "Max 20 charges. Regains 2d6+4 charges at dawn. Level 7+ spell power."
+    }
+    return tiers.get(rarity, "Standard 5e balancing applies.")
 
 # --- INITIALIZE SESSION STATES ---
 if 'session_log' not in st.session_state:
@@ -99,7 +158,6 @@ with streamlit_analytics.track():
     elif page == "📖 Spellbook Analytics":
         st.title("📖 Spellbook Analytics")
         st.info("Upload a spell CSV or view sample trends.")
-        # Simplified version of your analytics for stability
         data = pd.DataFrame({"School": ["Evocation", "Necromancy", "Abjuration"], "Count": [10, 5, 8]})
         st.altair_chart(alt.Chart(data).mark_bar().encode(x='School', y='Count'))
 
@@ -124,7 +182,24 @@ with streamlit_analytics.track():
             st.markdown(f"<div class='handout-card'><h3>{h_style.upper()}</h3><img src='{st.session_state.ai_outputs['handout_img']}' width='100%'/><br>{st.session_state.ai_outputs['handout_text']}</div>", unsafe_allow_html=True)
 
     elif page == "💎 Magic Item Artificer":
-        generic_ai_tool("💎 Magic Item Artificer", "Design a rare magic item for", "Item Name/Type", "magic_item", llm_provider, user_api_key)
+        st.title("💎 Magic Item Artificer")
+        item_theme = st.text_input("Item Name/Type", placeholder="e.g. A flaming greatsword", key="magic_item_theme")
+        rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
+        
+        # Pull in the new Recharge Tier Logic
+        balance_instructions = get_item_balance_rules(rarity_choice)
+        
+        if st.button("Forge Magic Item", key="btn_magic_item"):
+            with st.spinner("Enchanting the artifact..."):
+                prompt = f"""
+                Design a {rarity_choice} D&D 5e magic item based on this theme: {item_theme}.
+                STRICT BALANCING RULES: {balance_instructions}
+                Include Name, Rarity, Description, Mechanics, and Attunement requirement.
+                """
+                st.session_state.ai_outputs["magic_item"] = get_ai_response(prompt, llm_provider, user_api_key)
+        
+        if "magic_item" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
     elif page == "💀 Cursed Item Creator":
         generic_ai_tool("💀 Cursed Item Creator", "Design a magic item with a debilitating but thematic curse for", "Item Theme", "curse", llm_provider, user_api_key)
