@@ -14,48 +14,54 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (CROSS-BROWSER & CONTRAST FIX) ---
+# --- 🏰 THEMED UI (MASTERWORK CONTRAST FIX) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
     
+    /* Force Background & Text Visibility */
     [data-testid="stAppViewContainer"] {
         background-color: #f4ecd8 !important;
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    [data-testid="stHeader"], [data-testid="stToolbar"] {
-        background-color: rgba(0,0,0,0) !important;
-    }
-
-    html, body, [class*="st-"] {
-        color: #4a0404 !important;
+    /* Global Text Styling: Deeper Maroon for better contrast */
+    html, body, [class*="st-"], p, span {
+        color: #2e0808 !important; 
         font-family: 'Crimson Text', serif;
+        font-weight: 500 !important;
     }
 
+    /* Header Contrast: Added a subtle shadow so it doesn't 'sink' into the map */
+    h1, h2, h3 { 
+        font-family: 'MedievalSharp', cursive; 
+        color: #800000 !important;
+        text-shadow: 1px 1px 1px rgba(255,255,255,0.6); 
+    }
+
+    /* Expander Text Fix (The 'How to Use' section) */
+    .st-expanderContent p {
+        color: #000000 !important; /* Pure black for readability */
+        background-color: rgba(255, 255, 255, 0.5) !important; /* Semi-transparent white backing */
+        padding: 10px !important;
+        border-radius: 5px;
+    }
+
+    /* Input & Select Box Visibility Fix */
+    input, select, textarea, div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 2px solid #800000 !important;
+    }
+
+    /* Sidebar Fixes */
     [data-testid="stSidebar"] {
-        background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
         background-color: #2e0808 !important;
         border-right: 3px solid #d4af37;
     }
-    
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
         color: #ffffff !important;
-    }
-
-    /* Fix for "Select Rarity" box - High Contrast for Edge/Firefox */
-    div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #4a0404 !important;
-    }
-
-    div[role="listbox"] ul {
-        background-color: #ffffff !important;
-    }
-    
-    div[role="option"] {
-        color: #000000 !important;
+        text-shadow: none;
     }
 
     .stat-card { background-color: #ffffff; border: 1px solid #d1d1d1; padding: 20px; border-radius: 8px; border-left: 10px solid #b22222; margin-bottom: 20px; color: #1a1a1a; }
@@ -70,7 +76,6 @@ st.markdown("""
         border: none !important;
     }
     
-    h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #800000 !important; }
     .dungeon-grid { font-size: 24px; line-height: 1.1; text-align: center; background-color: #2c3e50; padding: 20px; border-radius: 10px; border: 4px solid #b22222; }
     </style>
     """, unsafe_allow_html=True)
@@ -127,8 +132,7 @@ with streamlit_analytics.track():
         "📖 Session Recap Scribe", "🧠 Assistant", "📫 Give Feedback"
     ])
 
-    # --- ROUTING LOGIC WITH INSTRUCTIONS ---
-    
+    # --- TOOLS WITH INSTRUCTIONS ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         with st.expander("📜 How to use"):
@@ -167,7 +171,7 @@ with streamlit_analytics.track():
     elif page == "📖 Spellbook Analytics":
         st.title("📖 Spellbook Analytics")
         with st.expander("📜 How to use"):
-            st.write("Upload a CSV of your spells (Name, School, Level) to see a visual breakdown of your magic schools. If no file is uploaded, sample trends are shown.")
+            st.write("Upload a CSV of your spells (Name, School, Level) to see a visual breakdown. If no file is uploaded, sample trends are shown.")
         
         uploaded_file = st.file_uploader("Upload a spell CSV", type="csv")
         df = pd.read_csv(uploaded_file) if uploaded_file else pd.DataFrame({"School": ["Evoc", "Necro", "Abjur"], "Count": [12, 5, 8]})
@@ -190,24 +194,11 @@ with streamlit_analytics.track():
         if "magic_item" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
-    elif page == "📜 Scribe's Handouts":
-        st.title("📜 Scribe's Handouts")
-        with st.expander("📜 How to use"):
-            st.write("Pick a style and a plot hook. The Scribe will write the text and use AI to generate a matching visual reference for your players.")
-        
-        h_style = st.selectbox("Style", ["Wanted Poster", "King's Decree", "Torn Journal Page"])
-        msg = st.text_input("Core Hook")
-        if st.button("Generate Handout"):
-            st.session_state.ai_outputs["handout_text"] = get_ai_response(f"Write a {h_style} about {msg}", llm_provider, user_api_key)
-            st.session_state.ai_outputs["handout_img"] = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(msg)}?width=512&height=512"
-        if "handout_text" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='handout-card'><h3>{h_style.upper()}</h3><img src='{st.session_state.ai_outputs['handout_img']}' width='100%'/><br>{st.session_state.ai_outputs['handout_text']}</div>", unsafe_allow_html=True)
-
     # --- ALL OTHER TOOLS (GENERIC PATTERN) ---
     else:
         st.title(f"{page}")
         with st.expander("📜 How to use"):
-            st.write(f"The {page} uses LLM inference to generate lore and mechanics. Simply input your prompt and click generate.")
+            st.write(f"The {page} uses AI to generate lore and mechanics. Simply input your concept and click generate.")
         
         user_val = st.text_input("Input concept...")
         if st.button("Generate"):
