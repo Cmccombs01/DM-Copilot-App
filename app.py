@@ -9,24 +9,20 @@ import os
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
 # --- 🚦 ROUTING: DETECT ANALYTICS MODE ---
-# This checks if you are viewing the analytics dashboard
 is_analytics = st.query_params.get("analytics") == "on"
 
 if is_analytics:
     # --- 🟢 HIGH-CONTRAST ANALYST MODE (BRIGHT GREEN) ---
     st.markdown("""
         <style>
-        /* Force a clean dark background */
         [data-testid="stAppViewContainer"] {
             background-color: #0e1117 !important;
             background-image: none !important;
         }
-        /* Make ALL text bright green for readability */
         html, body, [class*="st-"], p, span, label, li, h1, h2, h3, div {
             color: #00FF00 !important; 
             font-family: monospace !important;
         }
-        /* Make charts and borders visible */
         svg text {
             fill: #00FF00 !important;
         }
@@ -34,42 +30,46 @@ if is_analytics:
         """, unsafe_allow_html=True)
 
 else:
-    # --- 🏰 NORMAL THEMED UI (PARCHMENT & MAROON) ---
+    # --- 🏰 NORMAL THEMED UI (PARCHMENT MAIN, HACKER SIDEBAR) ---
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
         
-        /* Elegant Parchment Background */
+        /* 1. Main Content Area (Parchment & Maroon) */
         [data-testid="stAppViewContainer"] {
             background-color: #f4ecd8 !important;
             background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
         }
-
-        /* Global Text: Clean, legible sizing */
-        html, body, [class*="st-"], p, span, label, li {
+        [data-testid="stAppViewContainer"] p, 
+        [data-testid="stAppViewContainer"] span, 
+        [data-testid="stAppViewContainer"] label, 
+        [data-testid="stAppViewContainer"] li {
             color: #1a0000 !important; 
             font-family: 'Crimson Text', serif;
             font-size: 1.05rem !important;
         }
-
-        /* Headers: Deep Crimson, sharp */
-        h1, h2, h3 { 
+        [data-testid="stAppViewContainer"] h1, 
+        [data-testid="stAppViewContainer"] h2, 
+        [data-testid="stAppViewContainer"] h3 { 
             font-family: 'MedievalSharp', cursive; 
             color: #800000 !important; 
         }
 
-        /* Sidebar: Dark Leather */
+        /* 2. THE FIX: Sidebar Navigation (Black & Hacker Green) */
         [data-testid="stSidebar"] {
-            background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
-            background-color: #2e0808 !important;
-            border-right: 3px solid #d4af37;
+            background-image: none !important;
+            background-color: #000000 !important; /* Pure Black Background */
+            border-right: 3px solid #00FF00 !important; /* Green dividing line */
         }
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, 
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {
-            color: #ffffff !important;
+        
+        /* Force all text inside the sidebar to be Hacker Green */
+        [data-testid="stSidebar"] * {
+            color: #00FF00 !important;
+            font-family: monospace !important; /* Easy to read terminal font */
+            font-weight: bold !important;
         }
 
-        /* Clean, Professional Stat Cards */
+        /* 3. Output Cards & Inputs (Main Area) */
         .stat-card { 
             background-color: rgba(255, 255, 255, 0.95) !important; 
             border: 1px solid #d1d1d1 !important; 
@@ -80,8 +80,6 @@ else:
             box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
             color: #000000 !important;
         }
-
-        /* Inputs: Soft borders, highly readable */
         input, select, textarea, div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
@@ -142,7 +140,7 @@ def get_ai_response(prompt, llm_provider, user_api_key):
 
 # --- MAIN APP ---
 with streamlit_analytics.track():
-    st.sidebar.markdown("<h2 style='text-align: center; color: #d4af37;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
