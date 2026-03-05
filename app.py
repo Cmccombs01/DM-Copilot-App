@@ -5,6 +5,21 @@ import random
 from datetime import datetime
 import os
 
+# --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
+# This prevents the "dictionary changed size during iteration" crash 
+# when hundreds of users are clicking buttons at the same time!
+import streamlit_analytics2.display as sa2_display
+if not hasattr(sa2_display, "original_show_results"):
+    sa2_display.original_show_results = sa2_display.show_results
+
+def safe_show_results(data, reset_data, unsafe_password):
+    safe_data = data.copy()
+    safe_data["widgets"] = data.get("widgets", {}).copy()
+    return sa2_display.original_show_results(safe_data, reset_data, unsafe_password)
+
+sa2_display.show_results = safe_show_results
+# --------------------------------------------
+
 # --- 🐛 LOGGING & CONFIG ---
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
@@ -181,7 +196,6 @@ with streamlit_analytics.track():
         "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer", "📫 Give Feedback"
     ])
 
-    # --- 1. THE DEDICATED GUIDE PAGE ---
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
         st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
@@ -199,14 +213,12 @@ with streamlit_analytics.track():
         """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 2. THE DATA ANALYST FEEDBACK TOOL ---
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         
         with st.container():
             st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
             
-            # THE STAR FIX: Using a foolproof radio button selection instead of the experimental widget
             star_rating = st.radio("### Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
             
             st.markdown("### Got an idea for a new tool?")
@@ -233,7 +245,9 @@ with streamlit_analytics.track():
             st.write("Download the raw telemetry data to plug into Tableau or Excel.")
             if os.path.exists("telemetry_feedback.csv"):
                 df_feedback = pd.read_csv("telemetry_feedback.csv")
-                st.dataframe(df_feedback, use_container_width=True)
+                
+                # FIX: Replaced use_container_width with width="stretch"
+                st.dataframe(df_feedback, width="stretch")
                 
                 csv = df_feedback.to_csv(index=False).encode('utf-8')
                 st.download_button(
@@ -245,7 +259,6 @@ with streamlit_analytics.track():
             else:
                 st.info("No feedback data collected yet.")
 
-    # --- 3. CLEANED UP TOOLS ---
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         user_val = st.text_input("Pitch/Preferences", placeholder="e.g. A desert world where water is gold, players like puzzles")
@@ -268,7 +281,6 @@ with streamlit_analytics.track():
         if "magic_item" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
-    # Generic catch-all for the other tabs
     else:
         st.title(f"{page}")
         user_val = st.text_input("Input concept...")
@@ -279,4 +291,5 @@ with streamlit_analytics.track():
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs[page]}</div>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
-    st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", use_container_width=True)
+    # FIX: Replaced use_container_width with width="stretch"
+    st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", width="stretch")
