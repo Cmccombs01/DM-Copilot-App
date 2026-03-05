@@ -25,38 +25,40 @@ st.markdown("""
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    /* 2. Global Text Visibility: Pure Black for maximum contrast */
-    html, body, [class*="st-"], p, span, label {
+    /* 2. Global Text Visibility: Pure Black and Bold for maximum contrast */
+    html, body, [class*="st-"], p, span, label, li {
         color: #000000 !important; 
         font-family: 'Crimson Text', serif;
-        font-weight: 700 !important; /* Bolded for sharpness */
+        font-weight: 700 !important; 
     }
 
-    /* 3. Headers: High visibility Crimson with a clean shadow */
+    /* 3. Headers: High visibility Crimson with a clean white backing */
     h1, h2, h3 { 
         font-family: 'MedievalSharp', cursive; 
         color: #800000 !important;
         text-shadow: 2px 2px 0px rgba(255,255,255,1) !important; 
-        padding: 10px 0px;
+        background-color: rgba(255, 255, 255, 0.4);
+        padding: 10px;
+        border-radius: 8px;
     }
 
-    /* 4. THE READABILITY FIX: "How to Use" & Help Boxes */
+    /* 4. THE READABILITY FIX: "How to Use" & Help Boxes (Solid Opaque Paper) */
     .st-expanderContent {
-        background-color: #fffdf5 !important; /* Completely Opaque Paper */
-        border: 2px solid #800000 !important;
+        background-color: #fffdf5 !important; 
+        border: 3px solid #800000 !important;
         padding: 25px !important;
         border-radius: 12px;
-        box-shadow: 6px 6px 15px rgba(0,0,0,0.4);
+        box-shadow: 8px 8px 20px rgba(0,0,0,0.5);
     }
     
     .st-expanderContent p, .st-expanderContent li {
         color: #000000 !important; 
-        font-size: 1.2rem !important;
+        font-size: 1.25rem !important;
         line-height: 1.6 !important;
         text-shadow: none !important;
     }
 
-    /* 5. Input Boxes & Selectors: White with thick borders */
+    /* 5. Input Boxes & Selectors: Opaque white with thick maroon borders */
     input, select, textarea, div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -64,7 +66,7 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 6. Sidebar: High-Contrast White Text on Dark Crimson */
+    /* 6. Sidebar: High-Contrast White Text on Deep Crimson */
     [data-testid="stSidebar"] {
         background-color: #2e0808 !important;
         border-right: 4px solid #d4af37;
@@ -74,13 +76,13 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 7. Output Cards: Professional Stat Block look */
+    /* 7. Output Cards: Professional Stat Block look (No transparency) */
     .stat-card { 
         background-color: #ffffff !important; 
-        border: 2px solid #800000 !important; 
+        border: 3px solid #800000 !important; 
         padding: 25px; 
-        border-radius: 10px; 
-        box-shadow: 5px 5px 20px rgba(0,0,0,0.2);
+        border-radius: 12px; 
+        box-shadow: 6px 6px 25px rgba(0,0,0,0.3);
         color: #000000 !important;
     }
     
@@ -88,9 +90,10 @@ st.markdown("""
         background-color: #b22222 !important; 
         color: white !important; 
         font-family: 'MedievalSharp', cursive; 
-        height: 3em;
+        height: 3.2em;
         border: 2px solid #ffd700 !important;
-        font-size: 1.1rem !important;
+        font-size: 1.2rem !important;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -144,14 +147,14 @@ with streamlit_analytics.track():
         "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer"
     ])
 
-    # --- TOOLS WITH HIGH-CONTRAST INSTRUCTIONS ---
+    # --- TOOLS WITH HIGH-VISIBILITY INSTRUCTIONS ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         with st.expander("📜 How to use (Click for high-contrast guide)"):
             st.markdown("""
-            1. **The Concept:** Enter your world idea (e.g. 'A Gothic horror city').
-            2. **The Players:** Add what they enjoy (e.g. 'Combat and investigation').
-            3. **The Forge:** Click Generate to receive 3 tailored campaign hooks.
+            * **Step 1:** Enter your world concept (e.g. 'A Gothic horror city').
+            * **Step 2:** List what your players enjoy (e.g. 'Tactical combat and puzzles').
+            * **Step 3:** Click Generate to receive 3 tailored campaign hooks.
             """)
         
         user_val = st.text_input("Pitch/Preferences", placeholder="e.g. High fantasy, political intrigue")
@@ -163,7 +166,7 @@ with streamlit_analytics.track():
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
         with st.expander("📜 How to use"):
-            st.write("Pick a rarity and a name. The AI will generate a balanced 5e magic item with specific charges and attunement rules.")
+            st.write("Pick a rarity and a name. The AI will forge a unique item that follows official 5e recharge and power scaling rules.")
         
         item_theme = st.text_input("Item Name/Type", key="magic_item_theme")
         rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
