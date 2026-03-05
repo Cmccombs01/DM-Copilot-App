@@ -8,77 +8,103 @@ import os
 # --- 🐛 LOGGING & CONFIG ---
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (REFINED READABILITY & SPACING) ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
-    
-    /* Elegant Parchment Background */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f4ecd8 !important;
-        background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
-    }
+# --- 🚦 ROUTING: DETECT ANALYTICS MODE ---
+# This checks if you are viewing the analytics dashboard
+is_analytics = st.query_params.get("analytics") == "on"
 
-    /* Global Text: Clean, legible sizing */
-    html, body, [class*="st-"], p, span, label, li {
-        color: #1a0000 !important; 
-        font-family: 'Crimson Text', serif;
-        font-size: 1.05rem !important;
-    }
+if is_analytics:
+    # --- 🟢 HIGH-CONTRAST ANALYST MODE (BRIGHT GREEN) ---
+    st.markdown("""
+        <style>
+        /* Force a clean dark background */
+        [data-testid="stAppViewContainer"] {
+            background-color: #0e1117 !important;
+            background-image: none !important;
+        }
+        /* Make ALL text bright green for readability */
+        html, body, [class*="st-"], p, span, label, li, h1, h2, h3, div {
+            color: #00FF00 !important; 
+            font-family: monospace !important;
+        }
+        /* Make charts and borders visible */
+        svg text {
+            fill: #00FF00 !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
-    /* Headers: Deep Crimson, sharp */
-    h1, h2, h3 { 
-        font-family: 'MedievalSharp', cursive; 
-        color: #800000 !important; 
-    }
+else:
+    # --- 🏰 NORMAL THEMED UI (PARCHMENT & MAROON) ---
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
+        
+        /* Elegant Parchment Background */
+        [data-testid="stAppViewContainer"] {
+            background-color: #f4ecd8 !important;
+            background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
+        }
 
-    /* Sidebar: Dark Leather */
-    [data-testid="stSidebar"] {
-        background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
-        background-color: #2e0808 !important;
-        border-right: 3px solid #d4af37;
-    }
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, 
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {
-        color: #ffffff !important;
-    }
+        /* Global Text: Clean, legible sizing */
+        html, body, [class*="st-"], p, span, label, li {
+            color: #1a0000 !important; 
+            font-family: 'Crimson Text', serif;
+            font-size: 1.05rem !important;
+        }
 
-    /* Clean, Professional Stat Cards */
-    .stat-card { 
-        background-color: rgba(255, 255, 255, 0.95) !important; /* Slight transparency for elegance */
-        border: 1px solid #d1d1d1 !important; 
-        padding: 25px; 
-        border-radius: 8px; 
-        border-left: 8px solid #800000 !important; 
-        margin-bottom: 20px; 
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-        color: #000000 !important;
-    }
+        /* Headers: Deep Crimson, sharp */
+        h1, h2, h3 { 
+            font-family: 'MedievalSharp', cursive; 
+            color: #800000 !important; 
+        }
 
-    /* Inputs: Soft borders, highly readable */
-    input, select, textarea, div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #800000 !important;
-        border-radius: 4px !important;
-    }
-    
-    .stButton>button { 
-        background-color: #800000 !important; 
-        color: white !important; 
-        font-family: 'MedievalSharp', cursive; 
-        width: 100%; 
-        border-radius: 5px;
-        border: 1px solid #ffd700 !important;
-        font-size: 1.1rem !important;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #b22222 !important; 
-        border: 1px solid #ffffff !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+        /* Sidebar: Dark Leather */
+        [data-testid="stSidebar"] {
+            background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png") !important;
+            background-color: #2e0808 !important;
+            border-right: 3px solid #d4af37;
+        }
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, 
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {
+            color: #ffffff !important;
+        }
+
+        /* Clean, Professional Stat Cards */
+        .stat-card { 
+            background-color: rgba(255, 255, 255, 0.95) !important; 
+            border: 1px solid #d1d1d1 !important; 
+            padding: 25px; 
+            border-radius: 8px; 
+            border-left: 8px solid #800000 !important; 
+            margin-bottom: 20px; 
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+            color: #000000 !important;
+        }
+
+        /* Inputs: Soft borders, highly readable */
+        input, select, textarea, div[data-baseweb="select"] > div {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #800000 !important;
+            border-radius: 4px !important;
+        }
+        
+        .stButton>button { 
+            background-color: #800000 !important; 
+            color: white !important; 
+            font-family: 'MedievalSharp', cursive; 
+            width: 100%; 
+            border-radius: 5px;
+            border: 1px solid #ffd700 !important;
+            font-size: 1.1rem !important;
+            transition: 0.3s;
+        }
+        .stButton>button:hover {
+            background-color: #b22222 !important; 
+            border: 1px solid #ffffff !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
 # --- ⚖️ RECHARGE TIER LOGIC ---
 def get_item_balance_rules(rarity):
@@ -147,23 +173,20 @@ with streamlit_analytics.track():
         """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 2. THE NEW DATA ANALYST FEEDBACK TOOL ---
+    # --- 2. THE DATA ANALYST FEEDBACK TOOL ---
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         
-        # Wrapped in a container for professional spacing
         with st.container():
             st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
             st.markdown("### Rate your experience!")
             
-            # Streamlit's Native Star Rating Widget
             star_rating = st.feedback("stars")
             
             st.markdown("### Got an idea for a new tool?")
             user_feedback = st.text_area("What features should we add next?", height=100)
             
             if st.button("Submit Feedback"):
-                # Format the data for analysis
                 rating_val = star_rating + 1 if star_rating is not None else "No Rating"
                 new_data = pd.DataFrame({
                     "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
@@ -171,24 +194,15 @@ with streamlit_analytics.track():
                     "Feedback": [user_feedback]
                 })
                 
-                # Append to a local CSV dataset
                 csv_file = "telemetry_feedback.csv"
                 if os.path.exists(csv_file):
                     new_data.to_csv(csv_file, mode='a', header=False, index=False)
                 else:
                     new_data.to_csv(csv_file, index=False)
-                
-                # NOTE FOR GOOGLE SHEETS: 
-                # Once you set up st.secrets, you can push `new_data` to G-Sheets using:
-                # conn = st.connection("gsheets", type=GSheetsConnection)
-                # existing_data = conn.read(worksheet="Sheet1")
-                # updated_data = pd.concat([existing_data, new_data], ignore_index=True)
-                # conn.update(worksheet="Sheet1", data=updated_data)
 
                 st.success("The ravens have delivered your message! Thank you for helping us improve.")
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Analyst Export Section
         st.markdown("---")
         with st.expander("📊 Data Analyst Export (Admin View)"):
             st.write("Download the raw telemetry data to plug into Tableau or Excel.")
