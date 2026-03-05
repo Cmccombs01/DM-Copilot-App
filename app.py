@@ -35,11 +35,13 @@ else:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
         
-        /* 1. Main Content Area (Parchment & Maroon) */
+        /* 1. Main Content Area (Parchment) */
         [data-testid="stAppViewContainer"] {
             background-color: #f4ecd8 !important;
             background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
         }
+        
+        /* Target ONLY the main area for the Maroon text so it doesn't break the sidebar */
         [data-testid="stAppViewContainer"] p, 
         [data-testid="stAppViewContainer"] span, 
         [data-testid="stAppViewContainer"] label, 
@@ -55,17 +57,23 @@ else:
             color: #800000 !important; 
         }
 
-        /* 2. THE FIX: Sidebar Navigation (Black & Hacker Green) */
+        /* 2. THE FIX: Sidebar Navigation (Strict Black & Hacker Green) */
         [data-testid="stSidebar"] {
             background-image: none !important;
-            background-color: #000000 !important; /* Pure Black Background */
-            border-right: 3px solid #00FF00 !important; /* Green dividing line */
+            background-color: #000000 !important; 
+            border-right: 3px solid #00FF00 !important; 
         }
         
-        /* Force all text inside the sidebar to be Hacker Green */
-        [data-testid="stSidebar"] * {
+        /* Explicitly force every text element inside the sidebar to be Hacker Green */
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] div,
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
             color: #00FF00 !important;
-            font-family: monospace !important; /* Easy to read terminal font */
+            font-family: monospace !important; 
             font-weight: bold !important;
         }
 
