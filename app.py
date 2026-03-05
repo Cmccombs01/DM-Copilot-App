@@ -14,49 +14,48 @@ import os
 logging.basicConfig(level=logging.ERROR)
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🏰 THEMED UI (MAX READABILITY FIX) ---
+# --- 🏰 THEMED UI (SOLID PAPER READABILITY FIX) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
     
-    /* 1. Main Background */
+    /* 1. Main App Background */
     [data-testid="stAppViewContainer"] {
         background-color: #f4ecd8 !important;
         background-image: url("https://www.transparenttextures.com/patterns/old-map.png") !important;
     }
 
-    /* 2. Global Text: Deep black-maroon for contrast */
+    /* 2. Global Text Visibility: Sharp black-maroon */
     html, body, [class*="st-"], p, span, label {
         color: #1a0000 !important; 
         font-family: 'Crimson Text', serif;
         font-weight: 600 !important;
     }
 
-    /* 3. Headers: High visibility with a clean shadow */
+    /* 3. Header Contrast: Embossed look */
     h1, h2, h3 { 
         font-family: 'MedievalSharp', cursive; 
         color: #800000 !important;
         text-shadow: 2px 2px 2px rgba(255,255,255,1) !important; 
     }
 
-    /* 4. THE FIX: "How to Use" Box Readability */
+    /* 4. THE FIX: Solid Paper Expander (No transparency) */
     .st-expanderContent {
-        background-color: #fff9e6 !important; /* Solid light paper color */
+        background-color: #fffdf5 !important; 
         border: 2px solid #800000 !important;
         padding: 20px !important;
-        border-radius: 10px;
-        box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
     }
     
     .st-expanderContent p, .st-expanderContent li {
-        color: #000000 !important; /* Pure black text for instructions */
+        color: #000000 !important; 
         text-shadow: none !important;
-        font-size: 1.1rem !important;
-        line-height: 1.5 !important;
+        font-size: 1.15rem !important;
     }
 
-    /* 5. Input Boxes & Dropdowns */
-    input, select, textarea, div[data-baseweb="select"] > div {
+    /* 5. Dropdown/Select Box Contrast */
+    div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         color: #000000 !important;
         border: 2px solid #800000 !important;
@@ -72,6 +71,15 @@ st.markdown("""
     }
 
     .stat-card { background-color: #ffffff; border: 2px solid #800000; padding: 20px; border-radius: 8px; box-shadow: 3px 3px 10px rgba(0,0,0,0.1); }
+    
+    .stButton>button { 
+        background-color: #b22222 !important; 
+        color: white !important; 
+        font-family: 'MedievalSharp', cursive; 
+        width: 100%; 
+        border-radius: 5px;
+        border: 2px solid #ffd700 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -124,6 +132,7 @@ with streamlit_analytics.track():
         "🎭 NPC Quick-Forge", "📜 Scribe's Handouts", "💎 Magic Item Artificer"
     ])
 
+    # --- TOOLS WITH GUIDED INSTRUCTIONS ---
     if page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
         with st.expander("📜 How to use (Click to expand)"):
@@ -139,10 +148,21 @@ with streamlit_analytics.track():
         if "match" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['match']}</div>", unsafe_allow_html=True)
     
+    elif page == "⚔️ Encounter Architect":
+        st.title("⚔️ Encounter Architect")
+        with st.expander("📜 How to use"):
+            st.write("Input party level and theme. AI provides monsters, terrain, and a 'Tactical Twist' for the DM.")
+        
+        user_val = st.text_input("Party Level/Theme")
+        if st.button("Generate Encounter"):
+            st.session_state.ai_outputs["encounter"] = get_ai_response(f"Create a balanced D&D 5e encounter for: {user_val}", llm_provider, user_api_key)
+        if "encounter" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['encounter']}</div>", unsafe_allow_html=True)
+
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
         with st.expander("📜 How to use"):
-            st.write("Pick a theme and a rarity. The AI will generate a unique item that follows official 5e recharge and power scaling rules.")
+            st.write("Pick a theme and a rarity. The AI follows 5e standard recharge rules for balance.")
         
         item_theme = st.text_input("Item Name/Type", key="magic_item_theme")
         rarity_choice = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"], key="magic_item_rarity")
