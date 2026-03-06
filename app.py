@@ -6,8 +6,8 @@ from datetime import datetime
 import os
 import json
 import plotly.express as px
-import PyPDF2 # New dependency
-from openai import OpenAI # New dependency
+import PyPDF2 
+from openai import OpenAI 
 
 # --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
 import streamlit_analytics2.display as sa2_display
@@ -41,6 +41,8 @@ if 'session_log' not in st.session_state:
     st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
 if 'ai_outputs' not in st.session_state:
     st.session_state.ai_outputs = {}
+if 'combatants' not in st.session_state:
+    st.session_state.combatants = []
 
 def get_ai_response(prompt, llm_provider, user_api_key):
     try:
@@ -78,8 +80,9 @@ with analytics_context:
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", 
         "🆕 Patch Notes & Roadmap", 
-        "🎙️ Audio Scribe", # NEW
-        "📚 PDF-Lore Chat", # NEW
+        "⚔️ Initiative Tracker", 
+        "🎙️ Audio Scribe", 
+        "📚 PDF-Lore Chat", 
         "🤝 Matchmaker", 
         "⚔️ Encounter Architect", 
         "🏰 Dungeon Map Generator", 
@@ -114,8 +117,51 @@ with analytics_context:
 
     elif page == "🆕 Patch Notes & Roadmap":
         st.title("🆕 Patch Notes & Roadmap")
-        st.success("🚀 **Live Today:** Audio Scribe & PDF-Lore Chat Integration!")
-        st.info("🗺️ **Roadmap:** Image Generation (DALL-E/Stable Diffusion) & Initiative Tracker.")
+        st.success("🔥 **MAJOR UPDATE: THE MASTERWORK EDITION**")
+        st.markdown("""
+        ### 🚀 Live Today
+        * **⚔️ Initiative Tracker:** Track combat order with ease. Add, remove, and sort combatants on the fly.
+        * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper. No more manual note-taking.
+        * **📚 PDF-Lore Chat:** Talk to your homebrew PDFs. Search your campaign world instantly.
+        * **📤 VTT Exports:** Foundry VTT support for Encounters and Loot.
+        
+        ### 🗺️ The Road Ahead
+        * **🎨 Image Generation:** Visualizing your NPCs, items, and monsters.
+        """)
+
+    elif page == "⚔️ Initiative Tracker":
+        st.title("⚔️ Combat Theatre: Initiative Tracker")
+        st.markdown("Add players and enemies to track turn order automatically.")
+        
+        with st.expander("➕ Add Combatant", expanded=True):
+            c_col1, c_col2 = st.columns([3, 1])
+            with c_col1:
+                c_name = st.text_input("Character/Monster Name")
+            with c_col2:
+                c_init = st.number_input("Init Roll", value=10, min_value=-5, max_value=40)
+            
+            if st.button("Add to Combat"):
+                if c_name:
+                    st.session_state.combatants.append({"name": c_name, "init": c_init})
+                    st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
+                    st.rerun()
+
+        if st.session_state.combatants:
+            st.markdown("### 🛡️ Current Turn Order")
+            for idx, c in enumerate(st.session_state.combatants):
+                cols = st.columns([0.5, 3, 1, 0.5])
+                cols[0].write(f"#{idx+1}")
+                cols[1].write(f"**{c['name']}**")
+                cols[2].write(f"Initiative: {c['init']}")
+                if cols[3].button("🗑️", key=f"del_{idx}"):
+                    st.session_state.combatants.pop(idx)
+                    st.rerun()
+            
+            if st.button("🧹 Clear All Combatants"):
+                st.session_state.combatants = []
+                st.rerun()
+        else:
+            st.info("The battlefield is empty. Add combatants to begin.")
 
     elif page == "🎙️ Audio Scribe":
         st.title("🎙️ Audio Scribe (Whisper)")
@@ -125,8 +171,7 @@ with analytics_context:
         if audio_file:
             if st.button("Transcribe & Log"):
                 with st.spinner("Whisper is listening..."):
-                    # Whisper requires an OpenAI Key. Using Groq key as fallback if provided.
-                    client = OpenAI(api_key=user_api_key if user_api_key else st.secrets.get("OPENAI_API_KEY"))
+                    client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
                     transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
                     summary = get_ai_response(f"Summarize this D&D session transcript into bullet points: {transcript.text}", llm_provider, user_api_key)
                     st.session_state.ai_outputs["audio_summary"] = summary
@@ -144,7 +189,6 @@ with analytics_context:
             if st.button("Query Lore"):
                 with st.spinner("Consulting the archives..."):
                     reader = PyPDF2.PdfReader(pdf_file)
-                    # Pulling first 5 pages to avoid context window blowing up
                     text_context = ""
                     for i in range(min(5, len(reader.pages))):
                         text_context += reader.pages[i].extract_text()
@@ -201,6 +245,20 @@ with analytics_context:
         if "shop" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['shop']}</div>", unsafe_allow_html=True)
 
+    elif page == "🧩 Trap Architect":
+        st.title("🧩 Trap Architect")
+        if st.button("Construct Trap"):
+            st.session_state.ai_outputs["trap"] = get_ai_response("Design a trap.", llm_provider, user_api_key)
+        if "trap" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
+
+    elif page == "🎭 NPC Quick-Forge":
+        st.title("🎭 NPC Quick-Forge")
+        if st.button("Forge NPC"):
+            st.session_state.ai_outputs["npc"] = get_ai_response("Create a D&D NPC.", llm_provider, user_api_key)
+        if "npc" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
+
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
         rarity = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"])
@@ -221,20 +279,6 @@ with analytics_context:
             st.session_state.ai_outputs["loot_desc"] = get_ai_response(f"Flavorful loot for CR {cr}.", llm_provider, user_api_key)
         if "loot" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
-
-    elif page == "🎭 NPC Quick-Forge":
-        st.title("🎭 NPC Quick-Forge")
-        if st.button("Forge NPC"):
-            st.session_state.ai_outputs["npc"] = get_ai_response("Create a D&D NPC.", llm_provider, user_api_key)
-        if "npc" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
-
-    elif page == "🧩 Trap Architect":
-        st.title("🧩 Trap Architect")
-        if st.button("Construct Trap"):
-            st.session_state.ai_outputs["trap"] = get_ai_response("Design a trap.", llm_provider, user_api_key)
-        if "trap" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
 
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
