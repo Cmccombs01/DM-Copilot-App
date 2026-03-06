@@ -26,15 +26,13 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
     [data-testid="stAppViewContainer"] { background-color: #000000 !important; }
-    /* FIXED CSS: Removed 'span' from forced monospace to prevent icon breakage */
     [data-testid="stAppViewContainer"] p, label, li { color: #00FF00 !important; font-family: monospace !important; }
     h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #00FF00 !important; text-shadow: 0 0 10px #00FF00; }
     [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00FF00 !important; }
-    .stat-card {background-color: #0a0a0a !important; border: 1px solid #00FF00 !important; padding: 25px; border-radius: 8px; border-left: 10px solid #00FF00 !important; color: #00FF00 !important; margin-bottom: 20px; }
+    .stat-card {background-color: #0a0a0a !important; border: 1px solid #00FF00 !important; padding: 15px; border-radius: 8px; border-left: 10px solid #00FF00 !important; color: #00FF00 !important; margin-bottom: 10px; }
     .stButton>button {background-color: #000000 !important; color: #00FF00 !important; border: 2px solid #00FF00 !important; width: 100%; transition: 0.3s; }
     .stButton>button:hover { background-color: #00FF00 !important; color: #000000 !important; }
     .dice-result { font-size: 1.5rem; font-weight: bold; color: #00FF00; text-align: center; border: 2px dashed #00FF00; padding: 5px; margin-top: 5px; }
-    /* Ensure icons remain visible and green without showing raw text */
     span[data-testid="stExpanderIcon"] { color: #00FF00 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -72,8 +70,6 @@ except Exception:
 
 with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
-    st.sidebar.markdown("### ☕ Support the Smith")
-    st.sidebar.markdown("[![Support](https://img.shields.io/badge/Donate-Buy%20Me%20A%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/calebmccombs)")
     
     st.sidebar.markdown("---")
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
@@ -83,7 +79,8 @@ with analytics_context:
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", 
         "🆕 Patch Notes & Roadmap", 
-        "🛡️ Initiative Tracker", # Icon changed to Shield
+        "🛡️ Initiative Tracker", 
+        "🎨 Image Generator", 
         "🎙️ Audio Scribe", 
         "📚 PDF-Lore Chat", 
         "🤝 Matchmaker", 
@@ -108,99 +105,95 @@ with analytics_context:
     with d_col2:
         if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
         if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
-    
     if "last_roll" in st.session_state:
         st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
 
     # --- PAGE LOGIC ---
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.toast("🐉 Masterwork Edition Active!", icon="⚔️")
         st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin.</div>", unsafe_allow_html=True)
 
     elif page == "🆕 Patch Notes & Roadmap":
         st.title("🆕 Patch Notes & Roadmap")
-        st.success("🔥 **MAJOR UPDATE: THE MASTERWORK EDITION**")
+        st.success("🔥 **MAJOR UPDATE: THE MASTERWORK v2.0 EDITION**")
         st.markdown("""
         ### 🚀 Live Today
-        * **🛡️ Initiative Tracker:** Track combat order with ease. Add, remove, and sort combatants on the fly.
-        * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper. No more manual note-taking.
-        * **📚 PDF-Lore Chat:** Talk to your homebrew PDFs. Search your campaign world instantly.
-        * **📤 VTT Exports:** Foundry VTT support for Encounters and Loot.
-        
-        ### 🗺️ The Road Ahead
-        * **🎨 Image Generation:** Visualizing your NPCs, items, and monsters.
+        * **🛡️ Initiative Tracker v2.0:** Now tracks Max HP and Status Conditions for every combatant.
+        * **🎨 AI Image Artificer:** Generate visual art for your characters and items using DALL-E 3.
+        * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper.
+        * **📚 PDF-Lore Chat:** Talk directly to your homebrew PDFs.
         """)
 
     elif page == "🛡️ Initiative Tracker":
-        st.title("🛡️ Combat Theatre: Initiative Tracker")
-        st.markdown("Add players and enemies to track turn order automatically.")
+        st.title("🛡️ Initiative Tracker v2.0")
+        st.markdown("Track turn order, HP, and status conditions.")
         
         with st.expander("➕ Add Combatant", expanded=True):
-            c_col1, c_col2 = st.columns([3, 1])
-            with c_col1:
-                c_name = st.text_input("Character/Monster Name")
-            with c_col2:
-                c_init = st.number_input("Init Roll", value=10, min_value=-5, max_value=40)
+            c_col1, c_col2, c_col3 = st.columns([2, 1, 1])
+            with c_col1: c_name = st.text_input("Name")
+            with c_col2: c_init = st.number_input("Init Roll", value=10)
+            with c_col3: c_hp = st.number_input("Max HP", value=20)
+            c_status = st.selectbox("Condition", ["Healthy", "Blinded", "Charmed", "Deafened", "Frightened", "Grappled", "Incapacitated", "Paralyzed", "Petrified", "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"])
             
             if st.button("Add to Combat"):
                 if c_name:
-                    st.session_state.combatants.append({"name": c_name, "init": c_init})
+                    st.session_state.combatants.append({"name": c_name, "init": c_init, "hp": c_hp, "status": c_status})
                     st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
                     st.rerun()
 
         if st.session_state.combatants:
-            st.markdown("### 🛡️ Current Turn Order")
             for idx, c in enumerate(st.session_state.combatants):
-                cols = st.columns([0.5, 3, 1, 0.5])
-                cols[0].write(f"#{idx+1}")
-                cols[1].write(f"**{c['name']}**")
-                cols[2].write(f"Initiative: {c['init']}")
-                if cols[3].button("🗑️", key=f"del_{idx}"):
-                    st.session_state.combatants.pop(idx)
-                    st.rerun()
-            
+                with st.container():
+                    cols = st.columns([3, 1, 1, 2, 0.5])
+                    cols[0].write(f"**{c['name']}**")
+                    cols[1].write(f"⚔️ {c['init']}")
+                    cols[2].write(f"❤️ {c['hp']}")
+                    cols[3].write(f"✨ {c['status']}")
+                    if cols[4].button("🗑️", key=f"del_{idx}"):
+                        st.session_state.combatants.pop(idx)
+                        st.rerun()
             if st.button("🧹 Clear All Combatants"):
                 st.session_state.combatants = []
                 st.rerun()
-        else:
-            st.info("The battlefield is empty. Add combatants to begin.")
+
+    elif page == "🎨 Image Generator":
+        st.title("🎨 AI Image Artificer")
+        st.markdown("Visualize your NPCs, monsters, or legendary items using DALL-E 3.")
+        img_prompt = st.text_area("Describe the image (e.g., 'A battle-scarred Orc chieftain in heavy plate armor, digital art style')")
+        
+        if st.button("Forge Image"):
+            if img_prompt:
+                with st.spinner("Channeling artistic energy..."):
+                    try:
+                        client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                        response = client.images.generate(model="dall-e-3", prompt=img_prompt, n=1, size="1024x1024")
+                        st.image(response.data[0].url, caption=img_prompt)
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+            else:
+                st.warning("Please enter a description.")
 
     elif page == "🎙️ Audio Scribe":
-        st.title("🎙️ Audio Scribe (Whisper)")
-        st.markdown("Upload a voice memo of your session. We'll transcribe it and summarize the key points.")
-        audio_file = st.file_uploader("Upload Audio (mp3, wav, m4a)", type=["mp3", "wav", "m4a"])
-        
-        if audio_file:
-            if st.button("Transcribe & Log"):
-                with st.spinner("Whisper is listening..."):
-                    client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
-                    transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-                    summary = get_ai_response(f"Summarize this D&D session transcript into bullet points: {transcript.text}", llm_provider, user_api_key)
-                    st.session_state.ai_outputs["audio_summary"] = summary
-        
-        if "audio_summary" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['audio_summary']}</div>", unsafe_allow_html=True)
+        st.title("🎙️ Audio Scribe")
+        audio_file = st.file_uploader("Upload Session Audio", type=["mp3", "wav", "m4a"])
+        if audio_file and st.button("Transcribe"):
+            with st.spinner("Processing..."):
+                client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                st.session_state.ai_outputs["audio"] = get_ai_response(f"Summarize this D&D session transcript: {transcript.text}", llm_provider, user_api_key)
+        if "audio" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['audio']}</div>", unsafe_allow_html=True)
 
     elif page == "📚 PDF-Lore Chat":
         st.title("📚 PDF-Lore Chat")
-        st.markdown("Upload your World Anvil PDF or Homebrew Guide to chat with your lore.")
         pdf_file = st.file_uploader("Upload Lore PDF", type="pdf")
-        user_query = st.text_input("Ask a question about your world:")
-
-        if pdf_file and user_query:
-            if st.button("Query Lore"):
-                with st.spinner("Consulting the archives..."):
-                    reader = PyPDF2.PdfReader(pdf_file)
-                    text_context = ""
-                    for i in range(min(5, len(reader.pages))):
-                        text_context += reader.pages[i].extract_text()
-                    
-                    full_prompt = f"Using this lore: {text_context}\n\nQuestion: {user_query}"
-                    st.session_state.ai_outputs["lore_answer"] = get_ai_response(full_prompt, llm_provider, user_api_key)
-
-        if "lore_answer" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['lore_answer']}</div>", unsafe_allow_html=True)
+        query = st.text_input("Ask a question about your lore:")
+        if pdf_file and query and st.button("Consult Archives"):
+            reader = PyPDF2.PdfReader(pdf_file)
+            context = "".join([p.extract_text() for p in reader.pages[:5]])
+            st.session_state.ai_outputs["lore"] = get_ai_response(f"Using this context: {context}\n\nAnswer: {query}", llm_provider, user_api_key)
+        if "lore" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['lore']}</div>", unsafe_allow_html=True)
 
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
@@ -219,8 +212,6 @@ with analytics_context:
             st.session_state.ai_outputs["enc"] = get_ai_response(f"Build a level {e_lvl} encounter: {e_theme}. Boss Mode: {boss_mode}", llm_provider, user_api_key)
         if "enc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['enc']}</div>", unsafe_allow_html=True)
-            foundry_enc = {"name": "Encounter", "type": "combat", "system": {"description": {"value": st.session_state.ai_outputs['enc']}}}
-            st.download_button("📤 Export for Foundry VTT", data=json.dumps(foundry_enc), file_name="encounter.json")
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
