@@ -5,3 +5,4 @@ groq
 fpdf
 st-gsheets-connection
 google-cloud-firestore
+plotly
