@@ -179,7 +179,9 @@ def get_ai_response(prompt, llm_provider, user_api_key):
         return f"❌ Error: {str(e)}"
 
 # --- MAIN APP ---
-with streamlit_analytics.track():
+import json
+firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+with streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic"):
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
