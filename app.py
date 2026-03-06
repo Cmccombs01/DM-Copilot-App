@@ -6,6 +6,8 @@ from datetime import datetime
 import os
 import json
 import plotly.express as px
+import PyPDF2 # New dependency
+from openai import OpenAI # New dependency
 
 # --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
 import streamlit_analytics2.display as sa2_display
@@ -18,10 +20,6 @@ def safe_show_results(data, reset_data, unsafe_password):
 sa2_display.show_results = safe_show_results
 
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
-
-# --- 🚦 ROUTING ---
-is_analytics = st.query_params.get("analytics") == "on"
-is_admin = st.query_params.get("admin") == "on"
 
 # --- 🌌 THEME & STYLING ---
 st.markdown("""
@@ -57,7 +55,8 @@ def get_ai_response(prompt, llm_provider, user_api_key):
             res = ollama.chat(model="llama3.1", messages=[{"role": "user", "content": prompt}])['message']['content']
         st.session_state.session_log += f"\n\n[TIME: {datetime.now().strftime('%H:%M')}]\n{res}\n"
         return res
-    except Exception as e: return f"❌ Error: {str(e)}"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
 # --- 🚀 MAIN APP WITH FIRESTORE ---
 try:
@@ -70,17 +69,27 @@ with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     st.sidebar.markdown("### ☕ Support the Smith")
     st.sidebar.markdown("[![Support](https://img.shields.io/badge/Donate-Buy%20Me%20A%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/calebmccombs)")
-    st.sidebar.markdown("---")
     
+    st.sidebar.markdown("---")
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
     st.sidebar.markdown("---")
     page = st.sidebar.radio("Navigation", [
-        "📜 DM's Guide", "🆕 Patch Notes & Roadmap", "🤝 Matchmaker", 
-        "⚔️ Encounter Architect", "🏰 Dungeon Map Generator", "🍻 Tavern Rumor Mill", 
-        "💰 Dynamic Shops", "🧩 Trap Architect", "🎭 NPC Quick-Forge", 
-        "💎 Magic Item Artificer", "💰 Loot Hoard", "📫 Give Feedback"
+        "📜 DM's Guide", 
+        "🆕 Patch Notes & Roadmap", 
+        "🎙️ Audio Scribe", # NEW
+        "📚 PDF-Lore Chat", # NEW
+        "🤝 Matchmaker", 
+        "⚔️ Encounter Architect", 
+        "🏰 Dungeon Map Generator", 
+        "🍻 Tavern Rumor Mill", 
+        "💰 Dynamic Shops", 
+        "🧩 Trap Architect", 
+        "🎭 NPC Quick-Forge", 
+        "💎 Magic Item Artificer", 
+        "💰 Loot Hoard", 
+        "📫 Give Feedback"
     ])
 
     # --- 🎲 SIDEBAR DICE ROLLER ---
@@ -90,24 +99,61 @@ with analytics_context:
     with d_col1:
         if st.button("d20"): st.session_state.last_roll = f"d20: {random.randint(1, 20)}"
         if st.button("d10"): st.session_state.last_roll = f"d10: {random.randint(1, 10)}"
-        if st.button("d6"): st.session_state.last_roll = f"d6: {random.randint(1, 6)}"
     with d_col2:
         if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
         if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
-        if st.button("d4"): st.session_state.last_roll = f"d4: {random.randint(1, 4)}"
+    
     if "last_roll" in st.session_state:
         st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
 
     # --- PAGE LOGIC ---
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.toast("🐉 Masterwork Edition Active! Foundry VTT Exports enabled.", icon="⚔️")
-        st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin your prep.</div>", unsafe_allow_html=True)
+        st.toast("🐉 Masterwork Edition Active!", icon="⚔️")
+        st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin.</div>", unsafe_allow_html=True)
 
     elif page == "🆕 Patch Notes & Roadmap":
         st.title("🆕 Patch Notes & Roadmap")
-        st.success("🚀 **Live Today:** Foundry VTT Exports, Boss Mode, Tavern Rumors, and Dynamic Shops.")
-        st.info("🗺️ **Roadmap:** Audio Scribe (Whisper) Integration & PDF-Lore Chat.")
+        st.success("🚀 **Live Today:** Audio Scribe & PDF-Lore Chat Integration!")
+        st.info("🗺️ **Roadmap:** Image Generation (DALL-E/Stable Diffusion) & Initiative Tracker.")
+
+    elif page == "🎙️ Audio Scribe":
+        st.title("🎙️ Audio Scribe (Whisper)")
+        st.markdown("Upload a voice memo of your session. We'll transcribe it and summarize the key points.")
+        audio_file = st.file_uploader("Upload Audio (mp3, wav, m4a)", type=["mp3", "wav", "m4a"])
+        
+        if audio_file:
+            if st.button("Transcribe & Log"):
+                with st.spinner("Whisper is listening..."):
+                    # Whisper requires an OpenAI Key. Using Groq key as fallback if provided.
+                    client = OpenAI(api_key=user_api_key if user_api_key else st.secrets.get("OPENAI_API_KEY"))
+                    transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                    summary = get_ai_response(f"Summarize this D&D session transcript into bullet points: {transcript.text}", llm_provider, user_api_key)
+                    st.session_state.ai_outputs["audio_summary"] = summary
+        
+        if "audio_summary" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['audio_summary']}</div>", unsafe_allow_html=True)
+
+    elif page == "📚 PDF-Lore Chat":
+        st.title("📚 PDF-Lore Chat")
+        st.markdown("Upload your World Anvil PDF or Homebrew Guide to chat with your lore.")
+        pdf_file = st.file_uploader("Upload Lore PDF", type="pdf")
+        user_query = st.text_input("Ask a question about your world:")
+
+        if pdf_file and user_query:
+            if st.button("Query Lore"):
+                with st.spinner("Consulting the archives..."):
+                    reader = PyPDF2.PdfReader(pdf_file)
+                    # Pulling first 5 pages to avoid context window blowing up
+                    text_context = ""
+                    for i in range(min(5, len(reader.pages))):
+                        text_context += reader.pages[i].extract_text()
+                    
+                    full_prompt = f"Using this lore: {text_context}\n\nQuestion: {user_query}"
+                    st.session_state.ai_outputs["lore_answer"] = get_ai_response(full_prompt, llm_provider, user_api_key)
+
+        if "lore_answer" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['lore_answer']}</div>", unsafe_allow_html=True)
 
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
@@ -119,21 +165,15 @@ with analytics_context:
 
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
-        boss_mode = st.toggle("Enable 'Boss Mode' (Legendary Action Balancing)")
+        boss_mode = st.toggle("Enable 'Boss Mode'")
         e_lvl = st.slider("Party Level", 1, 20, 5)
         e_theme = st.text_input("Theme", placeholder="e.g., Undead swamp")
         if st.button("Build Encounter"):
             st.session_state.ai_outputs["enc"] = get_ai_response(f"Build a level {e_lvl} encounter: {e_theme}. Boss Mode: {boss_mode}", llm_provider, user_api_key)
-            st.session_state.ai_outputs["graph_data"] = pd.DataFrame({"Monster": ["Minion", "Elite", "Boss"], "HP": [random.randint(10,30), random.randint(40,80), random.randint(100,200)], "CR": [max(0,e_lvl-2), e_lvl, e_lvl+2]})
-        
         if "enc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['enc']}</div>", unsafe_allow_html=True)
-            # FOUNDRY VTT EXPORT
-            foundry_enc = {"name": "DM Co-Pilot Encounter", "type": "combat", "system": {"description": {"value": st.session_state.ai_outputs['enc']}}}
-            st.download_button("📤 Export Encounter for Foundry VTT", data=json.dumps(foundry_enc, indent=4), file_name="foundry_encounter.json", mime="application/json")
-        
-        if "graph_data" in st.session_state.ai_outputs:
-            st.scatter_chart(st.session_state.ai_outputs["graph_data"], x="CR", y="HP", color="Monster")
+            foundry_enc = {"name": "Encounter", "type": "combat", "system": {"description": {"value": st.session_state.ai_outputs['enc']}}}
+            st.download_button("📤 Export for Foundry VTT", data=json.dumps(foundry_enc), file_name="encounter.json")
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
@@ -157,7 +197,7 @@ with analytics_context:
         st.title("💰 Dynamic Shops")
         shop_type = st.selectbox("Shop Type", ["Blacksmith", "Alchemist", "Curio Shop"])
         if st.button("Open Shop"):
-            st.session_state.ai_outputs["shop"] = get_ai_response(f"Generate a {shop_type} with a quirky shopkeeper and inventory table.", llm_provider, user_api_key)
+            st.session_state.ai_outputs["shop"] = get_ai_response(f"Generate a {shop_type} with a quirky shopkeeper.", llm_provider, user_api_key)
         if "shop" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['shop']}</div>", unsafe_allow_html=True)
 
@@ -181,9 +221,6 @@ with analytics_context:
             st.session_state.ai_outputs["loot_desc"] = get_ai_response(f"Flavorful loot for CR {cr}.", llm_provider, user_api_key)
         if "loot" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
-            # FOUNDRY VTT EXPORT
-            foundry_loot = {"name": "Hoard Loot", "type": "loot", "system": {"description": {"value": st.session_state.ai_outputs['loot']}}}
-            st.download_button("📤 Export Loot for Foundry VTT", data=json.dumps(foundry_loot, indent=4), file_name="foundry_loot.json", mime="application/json")
 
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 NPC Quick-Forge")
@@ -207,11 +244,12 @@ with analytics_context:
             try:
                 from streamlit_gsheets import GSheetsConnection
                 conn = st.connection("gsheets", type=GSheetsConnection)
-                new_data = pd.DataFrame({"Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "Stars": [star_rating], "Feedback": [user_feedback]})
-                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5).dropna(how="all")
+                new_data = pd.DataFrame({"Timestamp": [datetime.now()], "Stars": [star_rating], "Feedback": [user_feedback]})
+                existing_data = conn.read(worksheet="Sheet1", ttl=5).dropna(how="all")
                 conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
                 st.success("Message recorded in your Grimoire.")
-            except: st.error("Feedback link offline, check secrets.")
+            except:
+                st.error("Feedback link offline, check secrets.")
 
     # --- 💾 GLOBAL EXPORT LOGIC ---
     st.sidebar.markdown("---")
