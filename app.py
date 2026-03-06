@@ -75,6 +75,13 @@ with analytics_context:
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
+    # --- 🔑 OPENAI KEY VERIFIER ---
+    openai_key = st.secrets.get("OPENAI_API_KEY")
+    if not openai_key:
+        st.sidebar.error("❌ OpenAI Key not found in Secrets!")
+    else:
+        st.sidebar.success("✅ OpenAI Engine Ready")
+
     st.sidebar.markdown("---")
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", 
@@ -162,10 +169,12 @@ with analytics_context:
         img_prompt = st.text_area("Describe the image (e.g., 'A battle-scarred Orc chieftain in heavy plate armor, digital art style')")
         
         if st.button("Forge Image"):
-            if img_prompt:
+            if not openai_key:
+                st.error("❌ Cannot generate image: OpenAI API Key is missing from Streamlit Secrets.")
+            elif img_prompt:
                 with st.spinner("Channeling artistic energy..."):
                     try:
-                        client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                        client = OpenAI(api_key=openai_key)
                         response = client.images.generate(model="dall-e-3", prompt=img_prompt, n=1, size="1024x1024")
                         st.image(response.data[0].url, caption=img_prompt)
                     except Exception as e:
@@ -177,10 +186,13 @@ with analytics_context:
         st.title("🎙️ Audio Scribe")
         audio_file = st.file_uploader("Upload Session Audio", type=["mp3", "wav", "m4a"])
         if audio_file and st.button("Transcribe"):
-            with st.spinner("Processing..."):
-                client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-                transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-                st.session_state.ai_outputs["audio"] = get_ai_response(f"Summarize this D&D session transcript: {transcript.text}", llm_provider, user_api_key)
+            if not openai_key:
+                st.error("❌ OpenAI Key missing.")
+            else:
+                with st.spinner("Processing..."):
+                    client = OpenAI(api_key=openai_key)
+                    transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                    st.session_state.ai_outputs["audio"] = get_ai_response(f"Summarize this D&D session transcript: {transcript.text}", llm_provider, user_api_key)
         if "audio" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['audio']}</div>", unsafe_allow_html=True)
 
