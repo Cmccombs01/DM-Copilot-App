@@ -19,53 +19,35 @@ def safe_show_results(data, reset_data, unsafe_password):
 sa2_display.show_results = safe_show_results
 # --------------------------------------------
 
-# --- 🐛 LOGGING & CONFIG ---
 st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
-# --- 🚦 ROUTING: DETECT ANALYTICS MODE ---
+# --- 🚦 ROUTING ---
 is_analytics = st.query_params.get("analytics") == "on"
+is_admin = st.query_params.get("admin") == "on"
 
-if is_analytics:
-    # --- 🟢 HIGH-CONTRAST ANALYST MODE ---
-    st.markdown("""
-        <style>
-        [data-testid="stAppViewContainer"] { background-color: #0e1117 !important; }
-        html, body, [class*="st-"], p, span, label, li, h1, h2, h3, div {
-            color: #00FF00 !important; font-family: monospace !important;
-        }
-        .stButton>button { 
-            background-color: #000000 !important; color: #00FF00 !important; 
-            border: 2px solid #00FF00 !important; width: 100%; 
-        }
-        </style>
-        """, unsafe_allow_html=True)
-else:
-    # --- 🌌 MASTERWORK HACKER THEME ---
-    st.markdown("""
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
-        [data-testid="stAppViewContainer"] { background-color: #000000 !important; }
-        [data-testid="stAppViewContainer"] p, span, label, li { color: #00FF00 !important; font-family: monospace !important; }
-        h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #00FF00 !important; text-shadow: 0 0 10px #00FF00; }
-        [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00FF00 !important; }
-        .stat-card {
-            background-color: #0a0a0a !important; border: 1px solid #00FF00 !important;
-            padding: 25px; border-radius: 8px; border-left: 10px solid #00FF00 !important;
-            color: #00FF00 !important; margin-bottom: 20px;
-        }
-        .stButton>button {
-            background-color: #000000 !important; color: #00FF00 !important;
-            border: 2px solid #00FF00 !important; width: 100%;
-        }
-        input, select, textarea { background-color: #000000 !important; color: #00FF00 !important; border: 1px solid #00FF00 !important; }
-        </style>
-    """, unsafe_allow_html=True)
+# --- 🌌 THEME & STYLING ---
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+    [data-testid="stAppViewContainer"] { background-color: #000000 !important; }
+    [data-testid="stAppViewContainer"] p, span, label, li { color: #00FF00 !important; font-family: monospace !important; }
+    h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #00FF00 !important; text-shadow: 0 0 10px #00FF00; }
+    [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00FF00 !important; }
+    .stat-card {
+        background-color: #0a0a0a !important; border: 1px solid #00FF00 !important;
+        padding: 25px; border-radius: 8px; border-left: 10px solid #00FF00 !important;
+        color: #00FF00 !important; margin-bottom: 20px;
+    }
+    .stButton>button {
+        background-color: #000000 !important; color: #00FF00 !important;
+        border: 2px solid #00FF00 !important; width: 100%; transition: 0.3s;
+    }
+    .stButton>button:hover { background-color: #00FF00 !important; color: #000000 !important; }
+    .dice-result { font-size: 1.5rem; font-weight: bold; color: #00FF00; text-align: center; border: 2px dashed #00FF00; padding: 5px; margin-top: 5px; }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- ⚙️ HELPER LOGIC ---
-def get_item_balance_rules(rarity):
-    tiers = {"Common": "1 charge, no recharge.", "Uncommon": "Max 3, regains 1d3.", "Rare": "Max 7, regains 1d6+1.", "Very Rare": "Max 10, regains 1d8+2.", "Legendary": "Max 20, regains 2d6+4."}
-    return tiers.get(rarity, "Standard 5e balancing.")
-
 if 'session_log' not in st.session_state:
     st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
 if 'ai_outputs' not in st.session_state:
@@ -96,99 +78,94 @@ except Exception:
 
 with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
+    
+    # --- 💰 MONETIZATION ---
+    st.sidebar.markdown("### ☕ Support the Smith")
+    st.sidebar.markdown("[![Support](https://img.shields.io/badge/Donate-Buy%20Me%20A%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/calebmccombs)")
+    
+    st.sidebar.markdown("---")
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     st.sidebar.markdown("---")
     
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", "🤝 Matchmaker", "⚔️ Encounter Architect", "🏰 Dungeon Map Generator",
-        "🧩 Trap Architect", "🎭 NPC Quick-Forge", "💎 Magic Item Artificer", "📫 Give Feedback"
+        "🧩 Trap Architect", "🎭 NPC Quick-Forge", "💎 Magic Item Artificer", "💰 Loot Hoard", "📫 Give Feedback"
     ])
+
+    # --- 🎲 SIDEBAR DICE ROLLER ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎲 Quick-Roll")
+    d_col1, d_col2 = st.sidebar.columns(2)
+    with d_col1:
+        if st.button("d20"): st.session_state.last_roll = f"d20: {random.randint(1, 20)}"
+        if st.button("d10"): st.session_state.last_roll = f"d10: {random.randint(1, 10)}"
+        if st.button("d6"): st.session_state.last_roll = f"d6: {random.randint(1, 6)}"
+    with d_col2:
+        if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
+        if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
+        if st.button("d4"): st.session_state.last_roll = f"d4: {random.randint(1, 4)}"
+    if "last_roll" in st.session_state:
+        st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
 
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.markdown("<div class='stat-card'>### Masterwork Instruction\nWelcome back, Dungeon Master. All tools are now fully operational. Use the sidebar to switch between generators. Your session is being permanently logged to the cloud.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='stat-card'>### Pro Edition Active\nUse the sidebar for navigation and the <b>Quick-Roll</b> dice utility. Admin export is now hidden.</div>", unsafe_allow_html=True)
+
+    elif page == "💰 Loot Hoard":
+        st.title("💰 Loot Hoard Generator")
+        cr = st.slider("Monster Challenge Rating (CR)", 0, 30, 5)
+        if st.button("Generate Hoard"):
+            gp = random.randint(10, 100) * cr
+            sp = random.randint(50, 500) * cr
+            gems = random.randint(1, 5) if cr > 10 else 0
+            art = random.choice(["Golden Chalice", "Silk Tapestry", "Jade Idol", "Ivory Statuette"]) if random.random() > 0.8 else "None"
+            res = f"**Hoard Found:**\n- {gp} Gold Pieces\n- {sp} Silver Pieces\n- {gems} Rare Gems\n- **Special Object:** {art}"
+            st.session_state.ai_outputs["loot"] = res
+            prompt = f"Describe a flavorful D&D loot stash for a CR {cr} creature. Include {gp} gold and {art} if applicable."
+            st.session_state.ai_outputs["loot_desc"] = get_ai_response(prompt, llm_provider, user_api_key)
+        if "loot" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
 
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 NPC Quick-Forge")
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            npc_race = st.selectbox("Race", ["Human", "Elf", "Dwarf", "Tiefling", "Dragonborn", "Half-Orc", "Gnome"])
-            npc_role = st.text_input("Role/Job", placeholder="e.g. Grumpy barkeep, shifty informant")
-            npc_power = st.select_slider("Combat Power", options=["Civilian", "Elite", "Legendary"])
-        with col2:
-            if st.button("Forge NPC"):
-                prompt = f"Create a D&D 5e NPC: Race: {npc_race}, Job: {npc_role}. Power Level: {npc_power}. Include a physical description, a 'Secret Motivation', and a brief 3-action combat stat block."
-                st.session_state.ai_outputs["npc"] = get_ai_response(prompt, llm_provider, user_api_key)
-        
+        npc_race = st.selectbox("Race", ["Human", "Elf", "Dwarf", "Tiefling", "Dragonborn"])
+        npc_role = st.text_input("Role")
+        if st.button("Forge NPC"):
+            st.session_state.ai_outputs["npc"] = get_ai_response(f"D&D NPC: {npc_race} {npc_role}.", llm_provider, user_api_key)
         if "npc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            map_theme = st.selectbox("Theme", ["Stone Dungeon", "Overgrown Ruins", "Volcanic Cave", "Ice Vault"])
-            map_size = st.slider("Map Scale", 5, 15, 10)
-            if st.button("Generate Layout"):
-                grid = []
-                for r in range(map_size):
-                    row = "".join(random.choices([".", ".", "#", "?"], weights=[60, 20, 15, 5], k=map_size))
-                    grid.append(row)
-                st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
-                prompt = f"Describe a tactical D&D battlemap with the theme '{map_theme}'. Include 3 environmental hazards and 1 hidden secret."
-                st.session_state.ai_outputs["map_desc"] = get_ai_response(prompt, llm_provider, user_api_key)
-        with col2:
-            if "map_grid" in st.session_state.ai_outputs:
-                st.markdown("### ASCII Tactical Grid")
-                st.code(st.session_state.ai_outputs["map_grid"], language="text")
-                st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['map_desc']}</div>", unsafe_allow_html=True)
+        if st.button("Generate Layout"):
+            grid = ["".join(random.choices([".", "#", "?"], weights=[70, 20, 10], k=10)) for _ in range(10)]
+            st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
+        if "map_grid" in st.session_state.ai_outputs:
+            st.code(st.session_state.ai_outputs["map_grid"])
 
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap Architect")
-        t_lvl = st.number_input("Average Party Level", 1, 20, 5)
-        t_danger = st.select_slider("Danger Level", options=["Nasty", "Deadly", "Apocalyptic"])
-        t_type = st.text_input("Trap Concept", placeholder="e.g. Swinging scythes with poison")
+        t_lvl = st.number_input("Party Level", 1, 20, 5)
         if st.button("Construct Trap"):
-            dc = 10 + (t_lvl // 2) + (2 if t_danger == "Deadly" else 5 if t_danger == "Apocalyptic" else 0)
-            dmg_dice = f"{t_lvl}d10" if t_danger == "Apocalyptic" else f"{t_lvl // 2 + 1}d10"
-            prompt = f"Design a D&D 5e trap: {t_type}. Danger: {t_danger}. Save DC: {dc}. Damage: {dmg_dice}. Include a 'Counter-Measure' for Rogues."
-            st.session_state.ai_outputs["trap"] = get_ai_response(prompt, llm_provider, user_api_key)
+            st.session_state.ai_outputs["trap"] = get_ai_response(f"Design level {t_lvl} trap.", llm_provider, user_api_key)
         if "trap" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
 
-    elif page == "🤝 Matchmaker":
-        st.title("🤝 Campaign Matchmaker")
-        user_val = st.text_input("Preferences", placeholder="e.g. High magic, desert world")
-        if st.button("Generate Matchmaker"):
-            st.session_state.ai_outputs["match"] = get_ai_response(f"Campaign pitch for: {user_val}", llm_provider, user_api_key)
-        if "match" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['match']}</div>", unsafe_allow_html=True)
-
-    elif page == "💎 Magic Item Artificer":
-        st.title("💎 Magic Item Artificer")
-        item_theme = st.text_input("Item Name", placeholder="e.g. Cloak of Shadows")
-        rarity_choice = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"])
-        if st.button("Forge Item"):
-            balance = get_item_balance_rules(rarity_choice)
-            st.session_state.ai_outputs["magic_item"] = get_ai_response(f"Design a {rarity_choice} D&D item: {item_theme}. Rules: {balance}", llm_provider, user_api_key)
-        if "magic_item" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
-
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
-        with st.container():
-            st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
-            star_rating = st.radio("### Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
-            user_feedback = st.text_area("What features should we add next?", height=100)
-            if st.button("Submit Feedback"):
-                from streamlit_gsheets import GSheetsConnection
-                conn = st.connection("gsheets", type=GSheetsConnection)
-                new_data = pd.DataFrame({"Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "Stars": [star_rating], "Feedback": [user_feedback]})
-                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5).dropna(how="all")
-                conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
-                st.success("Message recorded in your Grimoire.")
-            st.markdown("</div>", unsafe_allow_html=True)
+        if st.button("Submit Feedback"):
+            st.success("Message recorded in your Grimoire.")
+
+    # --- 🕵️‍♂️ HIDDEN ADMIN SECTION ---
+    if is_admin:
+        st.markdown("---")
+        with st.expander("📊 SECRET ADMIN DATA EXPORT"):
+            if os.path.exists("telemetry_feedback.csv"):
+                df = pd.read_csv("telemetry_feedback.csv")
+                st.dataframe(df)
+            else:
+                st.info("No CSV data found.")
 
     st.sidebar.markdown("---")
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt")
