@@ -7,7 +7,7 @@ import os
 import json
 import plotly.express as px
 
-# --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS (PRESERVED) ---
+# --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
 import streamlit_analytics2.display as sa2_display
 if not hasattr(sa2_display, "original_show_results"):
     sa2_display.original_show_results = sa2_display.show_results
@@ -23,7 +23,7 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="�
 is_analytics = st.query_params.get("analytics") == "on"
 is_admin = st.query_params.get("admin") == "on"
 
-# --- 🌌 THEME & STYLING (PRESERVED) ---
+# --- 🌌 THEME & STYLING ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
@@ -38,7 +38,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- ⚙️ HELPER LOGIC (PRESERVED) ---
+# --- ⚙️ HELPER LOGIC ---
 if 'session_log' not in st.session_state:
     st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
 if 'ai_outputs' not in st.session_state:
@@ -59,7 +59,7 @@ def get_ai_response(prompt, llm_provider, user_api_key):
         return res
     except Exception as e: return f"❌ Error: {str(e)}"
 
-# --- 🚀 MAIN APP WITH FIRESTORE (PRESERVED) ---
+# --- 🚀 MAIN APP WITH FIRESTORE ---
 try:
     firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     analytics_context = streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic")
@@ -77,21 +77,13 @@ with analytics_context:
     
     st.sidebar.markdown("---")
     page = st.sidebar.radio("Navigation", [
-        "📜 DM's Guide", 
-        "🆕 Patch Notes & Roadmap",
-        "🤝 Matchmaker", 
-        "⚔️ Encounter Architect", 
-        "🏰 Dungeon Map Generator", 
-        "🍻 Tavern Rumor Mill", 
-        "💰 Dynamic Shops",      
-        "🧩 Trap Architect", 
-        "🎭 NPC Quick-Forge", 
-        "💎 Magic Item Artificer", 
-        "💰 Loot Hoard", 
-        "📫 Give Feedback"
+        "📜 DM's Guide", "🆕 Patch Notes & Roadmap", "🤝 Matchmaker", 
+        "⚔️ Encounter Architect", "🏰 Dungeon Map Generator", "🍻 Tavern Rumor Mill", 
+        "💰 Dynamic Shops", "🧩 Trap Architect", "🎭 NPC Quick-Forge", 
+        "💎 Magic Item Artificer", "💰 Loot Hoard", "📫 Give Feedback"
     ])
 
-    # --- 🎲 SIDEBAR DICE ROLLER (PRESERVED) ---
+    # --- 🎲 SIDEBAR DICE ROLLER ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎲 Quick-Roll")
     d_col1, d_col2 = st.sidebar.columns(2)
@@ -109,16 +101,17 @@ with analytics_context:
     # --- PAGE LOGIC ---
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.toast("🐉 Masterwork Update Live: Added Tavern Rumors & Shops!", icon="🍻")
-        st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin.</div>", unsafe_allow_html=True)
+        st.toast("🐉 Masterwork Edition Active! Foundry VTT Exports enabled.", icon="⚔️")
+        st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin your prep.</div>", unsafe_allow_html=True)
 
     elif page == "🆕 Patch Notes & Roadmap":
         st.title("🆕 Patch Notes & Roadmap")
-        st.success("**Live Now:** Boss Mode balancing, Tavern Rumor Mill, Dynamic Shops, and VTT Exports.")
+        st.success("🚀 **Live Today:** Foundry VTT Exports, Boss Mode, Tavern Rumors, and Dynamic Shops.")
+        st.info("🗺️ **Roadmap:** Audio Scribe (Whisper) Integration & PDF-Lore Chat.")
 
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
-        user_pref = st.text_area("What kind of game?")
+        user_pref = st.text_area("What kind of game do your players want?")
         if st.button("Generate Pitches"):
             st.session_state.ai_outputs["match"] = get_ai_response(f"Generate 3 campaign pitches for: {user_pref}", llm_provider, user_api_key)
         if "match" in st.session_state.ai_outputs:
@@ -130,24 +123,33 @@ with analytics_context:
         e_lvl = st.slider("Party Level", 1, 20, 5)
         e_theme = st.text_input("Theme", placeholder="e.g., Undead swamp")
         if st.button("Build Encounter"):
-            prompt = f"Build a level {e_lvl} encounter: {e_theme}."
-            if boss_mode: prompt += " Calibrate for optimized players with Boss Legendary Actions."
-            st.session_state.ai_outputs["enc"] = get_ai_response(prompt, llm_provider, user_api_key)
+            st.session_state.ai_outputs["enc"] = get_ai_response(f"Build a level {e_lvl} encounter: {e_theme}. Boss Mode: {boss_mode}", llm_provider, user_api_key)
             st.session_state.ai_outputs["graph_data"] = pd.DataFrame({"Monster": ["Minion", "Elite", "Boss"], "HP": [random.randint(10,30), random.randint(40,80), random.randint(100,200)], "CR": [max(0,e_lvl-2), e_lvl, e_lvl+2]})
         
         if "enc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['enc']}</div>", unsafe_allow_html=True)
-            if st.button("📤 Export for VTT"):
-                st.download_button("Download JSON", data=json.dumps({"lvl": e_lvl, "boss": boss_mode}), file_name="encounter_vtt.json")
+            # FOUNDRY VTT EXPORT
+            foundry_enc = {"name": "DM Co-Pilot Encounter", "type": "combat", "system": {"description": {"value": st.session_state.ai_outputs['enc']}}}
+            st.download_button("📤 Export Encounter for Foundry VTT", data=json.dumps(foundry_enc, indent=4), file_name="foundry_encounter.json", mime="application/json")
+        
         if "graph_data" in st.session_state.ai_outputs:
             st.scatter_chart(st.session_state.ai_outputs["graph_data"], x="CR", y="HP", color="Monster")
 
+    elif page == "🏰 Dungeon Map Generator":
+        st.title("🏰 Tactical Dungeon Map Generator")
+        if st.button("Generate Layout"):
+            grid = ["".join(random.choices([".", "#", "?"], weights=[75, 20, 5], k=12)) for _ in range(12)]
+            st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
+            st.session_state.ai_outputs["map_desc"] = get_ai_response("Describe a tactical D&D battlemap.", llm_provider, user_api_key)
+        if "map_grid" in st.session_state.ai_outputs:
+            st.code(st.session_state.ai_outputs["map_grid"])
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs.get('map_desc', '')}</div>", unsafe_allow_html=True)
+
     elif page == "🍻 Tavern Rumor Mill":
         st.title("🍻 Tavern Rumor Mill")
-        loc = st.text_input("Location Name", "Phandalin")
+        loc = st.text_input("Location Name", "The Sword Coast")
         if st.button("Listen for Rumors"):
-            prompt = f"Generate 3 rumors for {loc}: one true, one false, one dangerously misleading."
-            st.session_state.ai_outputs["rumor"] = get_ai_response(prompt, llm_provider, user_api_key)
+            st.session_state.ai_outputs["rumor"] = get_ai_response(f"Generate 3 rumors for {loc}: one true, one false, one dangerously misleading.", llm_provider, user_api_key)
         if "rumor" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['rumor']}</div>", unsafe_allow_html=True)
 
@@ -158,17 +160,6 @@ with analytics_context:
             st.session_state.ai_outputs["shop"] = get_ai_response(f"Generate a {shop_type} with a quirky shopkeeper and inventory table.", llm_provider, user_api_key)
         if "shop" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['shop']}</div>", unsafe_allow_html=True)
-
-    # --- ALL OTHER TOOLS (NPC FORGE, TRAPS, LOOT, ETC.) REMAIN INTACT ---
-    elif page == "🏰 Dungeon Map Generator":
-        st.title("🏰 Tactical Dungeon Map Generator")
-        if st.button("Generate Layout"):
-            grid = ["".join(random.choices([".", "#", "?"], weights=[75, 20, 5], k=12)) for _ in range(12)]
-            st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
-            st.session_state.ai_outputs["map_desc"] = get_ai_response("Describe a tactical D&D battlemap.", llm_provider, user_api_key)
-        if "map_grid" in st.session_state.ai_outputs:
-            st.code(st.session_state.ai_outputs["map_grid"])
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs.get('map_desc', '')}</div>", unsafe_allow_html=True)
 
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
@@ -190,8 +181,9 @@ with analytics_context:
             st.session_state.ai_outputs["loot_desc"] = get_ai_response(f"Flavorful loot for CR {cr}.", llm_provider, user_api_key)
         if "loot" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
-            if st.button("📥 Export Hoard for VTT"):
-                st.download_button("Download JSON", data=json.dumps({"cr": cr, "gold": gp}), file_name="loot_vtt.json")
+            # FOUNDRY VTT EXPORT
+            foundry_loot = {"name": "Hoard Loot", "type": "loot", "system": {"description": {"value": st.session_state.ai_outputs['loot']}}}
+            st.download_button("📤 Export Loot for Foundry VTT", data=json.dumps(foundry_loot, indent=4), file_name="foundry_loot.json", mime="application/json")
 
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 NPC Quick-Forge")
@@ -212,16 +204,19 @@ with analytics_context:
         star_rating = st.radio("Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
         user_feedback = st.text_area("What should we add next?")
         if st.button("Submit Feedback"):
-            st.success("Message recorded.")
+            try:
+                from streamlit_gsheets import GSheetsConnection
+                conn = st.connection("gsheets", type=GSheetsConnection)
+                new_data = pd.DataFrame({"Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "Stars": [star_rating], "Feedback": [user_feedback]})
+                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5).dropna(how="all")
+                conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
+                st.success("Message recorded in your Grimoire.")
+            except: st.error("Feedback link offline, check secrets.")
 
-    # --- 💾 GLOBAL EXPORT LOGIC (PRESERVED) ---
+    # --- 💾 GLOBAL EXPORT LOGIC ---
+    st.sidebar.markdown("---")
     adventure_content = f"# 🐉 DELVER'S GRIMOIRE: ADVENTURE EXPORT\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
     for key, val in st.session_state.ai_outputs.items():
         adventure_content += f"## {key.replace('_', ' ').upper()}\n{val}\n\n"
-    st.sidebar.markdown("---")
-    st.sidebar.download_button("📥 Download Full Adventure", adventure_content, file_name=f"Adventure_{datetime.now().strftime('%m%d')}.md")
+    st.sidebar.download_button("📥 Download Full Adventure (.md)", adventure_content, file_name=f"Adventure_{datetime.now().strftime('%m%d')}.md")
     st.sidebar.download_button("📥 Export Session Log (RAW)", st.session_state.session_log, file_name="DM_Log.txt")
-
-    if is_admin:
-        st.markdown("---")
-        with st.expander("📊 SECRET ADMIN DATA EXPORT"): st.write("Telemetry active.")
