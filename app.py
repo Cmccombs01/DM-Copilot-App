@@ -116,7 +116,7 @@ with analytics_context:
         st.title("🤝 Campaign Matchmaker")
         user_pref = st.text_area("What kind of game do your players want?", placeholder="e.g., High-seas piracy with lovecraftian horror.")
         if st.button("Generate Pitches"):
-            prompt = f"Act as a professional DM. Generate 3 unique campaign pitches based on: {user_pref}."
+            prompt = f"Act as a professional DM. Generate 3 unique campaign pitches based on: {user_pref}. Each must have a hook and a twist."
             st.session_state.ai_outputs["match"] = get_ai_response(prompt, llm_provider, user_api_key)
         if "match" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['match']}</div>", unsafe_allow_html=True)
@@ -124,68 +124,73 @@ with analytics_context:
     elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect")
         e_lvl = st.slider("Party Level", 1, 20, 5)
-        e_theme = st.text_input("Theme", placeholder="e.g., Undead swamp")
+        e_theme = st.text_input("Encounter Theme", placeholder="e.g., Goblin ambush in a misty forest")
         if st.button("Build Encounter"):
-            prompt = f"Build a D&D 5e encounter for level {e_lvl}. Theme: {e_theme}."
+            prompt = f"Design a D&D 5e combat encounter for level {e_lvl}. Theme: {e_theme}. Include monsters with HP and AC."
             st.session_state.ai_outputs["enc"] = get_ai_response(prompt, llm_provider, user_api_key)
-            # --- 📊 VISUAL GRAPH SIMULATION ---
+            # Simulate the Graph Data based on input
             st.session_state.ai_outputs["graph_data"] = pd.DataFrame({
                 "Monster": ["Minion", "Elite", "Boss"],
-                "HP": [random.randint(10,30), random.randint(40,80), random.randint(100,200)],
-                "CR": [e_lvl-2, e_lvl, e_lvl+2]
+                "HP": [random.randint(5, 15), random.randint(30, 60), random.randint(80, 150)],
+                "CR": [max(0, e_lvl-2), e_lvl, e_lvl+2]
             })
         if "enc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['enc']}</div>", unsafe_allow_html=True)
             if "graph_data" in st.session_state.ai_outputs:
-                st.write("### 📊 Encounter Difficulty Graph")
+                st.write("## 📊 Encounter Difficulty Graph")
                 st.scatter_chart(st.session_state.ai_outputs["graph_data"], x="CR", y="HP", color="Monster")
 
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
-        rarity = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"])
-        item_type = st.text_input("Item Type", placeholder="e.g., Vampiric Longsword")
-        if st.button("Forge Item"):
-            prompt = f"Design a {rarity} D&D magic item: {item_type}. Include 5e attunement and charges."
-            st.session_state.ai_outputs["magic"] = get_ai_response(prompt, llm_provider, user_api_key)
-        if "magic" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic']}</div>", unsafe_allow_html=True)
+        rarity = st.selectbox("Select Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"])
+        item_concept = st.text_input("Item Concept", placeholder="e.g., A shield made of dragon scales")
+        if st.button("Forge Magic Item"):
+            prompt = f"Design a {rarity} D&D 5e magic item based on: {item_concept}. Include attunement rules and flavorful charges."
+            st.session_state.ai_outputs["magic_item"] = get_ai_response(prompt, llm_provider, user_api_key)
+        if "magic_item" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
 
     elif page == "💰 Loot Hoard":
         st.title("💰 Loot Hoard Generator")
-        cr = st.slider("Monster CR", 0, 30, 5)
+        cr = st.slider("Monster Challenge Rating (CR)", 0, 30, 5)
         if st.button("Generate Hoard"):
             gp = random.randint(10, 100) * cr
-            st.session_state.ai_outputs["loot"] = f"**Hoard Found:** {gp} Gold Pieces."
+            sp = random.randint(50, 500) * cr
+            art = random.choice(["Golden Chalice", "Silk Tapestry", "Jade Idol"]) if random.random() > 0.7 else "None"
+            res = f"**Hoard Found:**\n- {gp} Gold Pieces\n- {sp} Silver Pieces\n- **Special Object:** {art}"
+            st.session_state.ai_outputs["loot"] = res
+            st.session_state.ai_outputs["loot_desc"] = get_ai_response(f"Describe a flavorful D&D loot stash for a CR {cr} creature with {gp} gold.", llm_provider, user_api_key)
         if "loot" in st.session_state.ai_outputs:
-            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
 
     elif page == "🎭 NPC Quick-Forge":
         st.title("🎭 NPC Quick-Forge")
-        npc_race = st.selectbox("Race", ["Human", "Elf", "Dwarf"])
+        npc_race = st.selectbox("Race", ["Human", "Elf", "Dwarf", "Tiefling", "Dragonborn"])
         if st.button("Forge NPC"):
-            st.session_state.ai_outputs["npc"] = get_ai_response(f"Create a {npc_race} NPC.", llm_provider, user_api_key)
+            st.session_state.ai_outputs["npc"] = get_ai_response(f"Create a {npc_race} D&D NPC with a secret motivation.", llm_provider, user_api_key)
         if "npc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
         if st.button("Generate Layout"):
-            grid = ["".join(random.choices([".", "#", "?"], k=10)) for _ in range(10)]
+            grid = ["".join(random.choices([".", "#", "?"], weights=[70, 20, 10], k=10)) for _ in range(10)]
             st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
         if "map_grid" in st.session_state.ai_outputs:
             st.code(st.session_state.ai_outputs["map_grid"])
 
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap Architect")
+        t_lvl = st.number_input("Average Party Level", 1, 20, 5)
         if st.button("Construct Trap"):
-            st.session_state.ai_outputs["trap"] = get_ai_response("Design a trap.", llm_provider, user_api_key)
+            st.session_state.ai_outputs["trap"] = get_ai_response(f"Design a deadly level {t_lvl} trap.", llm_provider, user_api_key)
         if "trap" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
 
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         if st.button("Submit Feedback"):
-            st.success("Message recorded.")
+            st.success("Message recorded in your Grimoire.")
 
     if is_admin:
         st.markdown("---")
