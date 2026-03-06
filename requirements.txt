@@ -4,3 +4,4 @@ streamlit-analytics2
 groq
 fpdf
 st-gsheets-connection
+google-cloud-firestore
