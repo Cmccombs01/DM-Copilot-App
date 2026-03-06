@@ -26,7 +26,7 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="�
 is_analytics = st.query_params.get("analytics") == "on"
 
 if is_analytics:
-    # --- 🟢 HIGH-CONTRAST ANALYST MODE (BRIGHT GREEN) ---
+    # --- 🟢 HIGH-CONTRAST ANALYST MODE ---
     st.markdown("""
         <style>
         [data-testid="stAppViewContainer"] { background-color: #0e1117 !important; }
@@ -94,8 +94,14 @@ def get_ai_response(prompt, llm_provider, user_api_key):
         return f"❌ Error: {str(e)}"
 
 # --- 🚀 MAIN APP ---
-firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-with streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic"):
+# We wrap the tracker in a try/except so if the database is busy, the app still loads!
+try:
+    firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    analytics_context = streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic")
+except Exception:
+    analytics_context = streamlit_analytics.track()
+
+with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
@@ -108,7 +114,7 @@ with streamlit_analytics.track(firestore_key_file=firestore_key, firestore_colle
 
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.markdown("<div class='stat-card'><h3>Masterwork Instruction</h3>Select a tool from the sidebar. Use <b>🏰 Dungeon Map</b> for tactical layouts and <b>🧩 Trap Architect</b> for dangerous hazards.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='stat-card'>### Masterwork Instruction\nSelect a tool from the sidebar. Use <b>🏰 Dungeon Map</b> for tactical layouts and <b>🧩 Trap Architect</b> for dangerous hazards.</div>", unsafe_allow_html=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
