@@ -63,13 +63,7 @@ else:
 
 # --- ⚙️ HELPER LOGIC ---
 def get_item_balance_rules(rarity):
-    tiers = {
-        "Common": "1 charge, no recharge.",
-        "Uncommon": "Max 3 charges. Regains 1d3 at dawn.",
-        "Rare": "Max 7 charges. Regains 1d6+1 at dawn.",
-        "Very Rare": "Max 10 charges. Regains 1d8+2 at dawn.",
-        "Legendary": "Max 20 charges. Regains 2d6+4 at dawn."
-    }
+    tiers = {"Common": "1 charge, no recharge.", "Uncommon": "Max 3, regains 1d3.", "Rare": "Max 7, regains 1d6+1.", "Very Rare": "Max 10, regains 1d8+2.", "Legendary": "Max 20, regains 2d6+4."}
     return tiers.get(rarity, "Standard 5e balancing.")
 
 if 'session_log' not in st.session_state:
@@ -94,7 +88,6 @@ def get_ai_response(prompt, llm_provider, user_api_key):
         return f"❌ Error: {str(e)}"
 
 # --- 🚀 MAIN APP ---
-# We wrap the tracker in a try/except so if the database is busy, the app still loads!
 try:
     firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     analytics_context = streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic")
@@ -114,7 +107,22 @@ with analytics_context:
 
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.markdown("<div class='stat-card'>### Masterwork Instruction\nSelect a tool from the sidebar. Use <b>🏰 Dungeon Map</b> for tactical layouts and <b>🧩 Trap Architect</b> for dangerous hazards.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='stat-card'>### Masterwork Instruction\nWelcome back, Dungeon Master. All tools are now fully operational. Use the sidebar to switch between generators. Your session is being permanently logged to the cloud.</div>", unsafe_allow_html=True)
+
+    elif page == "🎭 NPC Quick-Forge":
+        st.title("🎭 NPC Quick-Forge")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            npc_race = st.selectbox("Race", ["Human", "Elf", "Dwarf", "Tiefling", "Dragonborn", "Half-Orc", "Gnome"])
+            npc_role = st.text_input("Role/Job", placeholder="e.g. Grumpy barkeep, shifty informant")
+            npc_power = st.select_slider("Combat Power", options=["Civilian", "Elite", "Legendary"])
+        with col2:
+            if st.button("Forge NPC"):
+                prompt = f"Create a D&D 5e NPC: Race: {npc_race}, Job: {npc_role}. Power Level: {npc_power}. Include a physical description, a 'Secret Motivation', and a brief 3-action combat stat block."
+                st.session_state.ai_outputs["npc"] = get_ai_response(prompt, llm_provider, user_api_key)
+        
+        if "npc" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
 
     elif page == "🏰 Dungeon Map Generator":
         st.title("🏰 Tactical Dungeon Map Generator")
@@ -130,7 +138,6 @@ with analytics_context:
                 st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
                 prompt = f"Describe a tactical D&D battlemap with the theme '{map_theme}'. Include 3 environmental hazards and 1 hidden secret."
                 st.session_state.ai_outputs["map_desc"] = get_ai_response(prompt, llm_provider, user_api_key)
-        
         with col2:
             if "map_grid" in st.session_state.ai_outputs:
                 st.markdown("### ASCII Tactical Grid")
@@ -142,30 +149,13 @@ with analytics_context:
         t_lvl = st.number_input("Average Party Level", 1, 20, 5)
         t_danger = st.select_slider("Danger Level", options=["Nasty", "Deadly", "Apocalyptic"])
         t_type = st.text_input("Trap Concept", placeholder="e.g. Swinging scythes with poison")
-        
         if st.button("Construct Trap"):
             dc = 10 + (t_lvl // 2) + (2 if t_danger == "Deadly" else 5 if t_danger == "Apocalyptic" else 0)
             dmg_dice = f"{t_lvl}d10" if t_danger == "Apocalyptic" else f"{t_lvl // 2 + 1}d10"
             prompt = f"Design a D&D 5e trap: {t_type}. Danger: {t_danger}. Save DC: {dc}. Damage: {dmg_dice}. Include a 'Counter-Measure' for Rogues."
             st.session_state.ai_outputs["trap"] = get_ai_response(prompt, llm_provider, user_api_key)
-            
         if "trap" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
-
-    elif page == "📫 Give Feedback":
-        st.title("📫 Tavern Suggestion Box")
-        with st.container():
-            st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
-            star_rating = st.radio("### Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
-            user_feedback = st.text_area("What features should we add next?", height=100)
-            if st.button("Submit Feedback"):
-                from streamlit_gsheets import GSheetsConnection
-                conn = st.connection("gsheets", type=GSheetsConnection)
-                new_data = pd.DataFrame({"Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "Stars": [star_rating], "Feedback": [user_feedback]})
-                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5).dropna(how="all")
-                conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
-                st.success("Message recorded in your Grimoire.")
-            st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "🤝 Matchmaker":
         st.title("🤝 Campaign Matchmaker")
@@ -184,6 +174,21 @@ with analytics_context:
             st.session_state.ai_outputs["magic_item"] = get_ai_response(f"Design a {rarity_choice} D&D item: {item_theme}. Rules: {balance}", llm_provider, user_api_key)
         if "magic_item" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic_item']}</div>", unsafe_allow_html=True)
+
+    elif page == "📫 Give Feedback":
+        st.title("📫 Tavern Suggestion Box")
+        with st.container():
+            st.markdown("<div class='stat-card'>", unsafe_allow_html=True)
+            star_rating = st.radio("### Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
+            user_feedback = st.text_area("What features should we add next?", height=100)
+            if st.button("Submit Feedback"):
+                from streamlit_gsheets import GSheetsConnection
+                conn = st.connection("gsheets", type=GSheetsConnection)
+                new_data = pd.DataFrame({"Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "Stars": [star_rating], "Feedback": [user_feedback]})
+                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5).dropna(how="all")
+                conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
+                st.success("Message recorded in your Grimoire.")
+            st.markdown("</div>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt")
