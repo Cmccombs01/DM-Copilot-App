@@ -144,6 +144,30 @@ with analytics_context:
         if "magic" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['magic']}</div>", unsafe_allow_html=True)
 
+    elif page == "💰 Loot Hoard":
+        st.title("💰 Loot Hoard Generator")
+        cr = st.slider("Monster CR", 0, 30, 5)
+        if st.button("Generate Hoard"):
+            gp = random.randint(10, 100) * cr
+            st.session_state.ai_outputs["loot"] = f"**Hoard Found:** {gp} Gold Pieces."
+            st.session_state.ai_outputs["loot_desc"] = get_ai_response(f"Flavorful loot for CR {cr}.", llm_provider, user_api_key)
+        if "loot" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['loot']}\n\n{st.session_state.ai_outputs.get('loot_desc', '')}</div>", unsafe_allow_html=True)
+
+    elif page == "🎭 NPC Quick-Forge":
+        st.title("🎭 NPC Quick-Forge")
+        if st.button("Forge NPC"):
+            st.session_state.ai_outputs["npc"] = get_ai_response("Create a D&D NPC.", llm_provider, user_api_key)
+        if "npc" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
+
+    elif page == "🧩 Trap Architect":
+        st.title("🧩 Trap Architect")
+        if st.button("Construct Trap"):
+            st.session_state.ai_outputs["trap"] = get_ai_response("Design a trap.", llm_provider, user_api_key)
+        if "trap" in st.session_state.ai_outputs:
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['trap']}</div>", unsafe_allow_html=True)
+
     elif page == "📫 Give Feedback":
         st.title("📫 Tavern Suggestion Box")
         star_rating = st.radio("Rate your experience!", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], index=4, horizontal=True)
@@ -156,10 +180,16 @@ with analytics_context:
             conn.update(worksheet="Sheet1", data=pd.concat([existing_data, new_data], ignore_index=True))
             st.success("Message recorded in your Grimoire.")
 
+    # --- 💾 GLOBAL EXPORT LOGIC ---
+    adventure_content = f"# 🐉 DELVER'S GRIMOIRE: ADVENTURE EXPORT\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+    for key, val in st.session_state.ai_outputs.items():
+        adventure_content += f"## {key.replace('_', ' ').upper()}\n{val}\n\n"
+
+    st.sidebar.markdown("---")
+    st.sidebar.download_button("📥 Download Full Adventure", adventure_content, file_name=f"Adventure_{datetime.now().strftime('%m%d')}.md", help="Saves all generated tools to a single file.")
+    st.sidebar.download_button("📥 Export Session Log (RAW)", st.session_state.session_log, file_name="DM_Log.txt")
+
     if is_admin:
         st.markdown("---")
         with st.expander("📊 SECRET ADMIN DATA EXPORT"):
-            st.write("Telemetry data export active.")
-
-    st.sidebar.markdown("---")
-    st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt")
+            st.write("Telemetry active.")
