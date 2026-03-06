@@ -6,3 +6,5 @@ fpdf
 st-gsheets-connection
 google-cloud-firestore
 plotly
+openai
+PyPDF2
