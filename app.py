@@ -26,13 +26,16 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
     [data-testid="stAppViewContainer"] { background-color: #000000 !important; }
-    [data-testid="stAppViewContainer"] p, span, label, li { color: #00FF00 !important; font-family: monospace !important; }
+    /* FIXED CSS: Removed 'span' from forced monospace to prevent icon breakage */
+    [data-testid="stAppViewContainer"] p, label, li { color: #00FF00 !important; font-family: monospace !important; }
     h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #00FF00 !important; text-shadow: 0 0 10px #00FF00; }
     [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00FF00 !important; }
     .stat-card {background-color: #0a0a0a !important; border: 1px solid #00FF00 !important; padding: 25px; border-radius: 8px; border-left: 10px solid #00FF00 !important; color: #00FF00 !important; margin-bottom: 20px; }
     .stButton>button {background-color: #000000 !important; color: #00FF00 !important; border: 2px solid #00FF00 !important; width: 100%; transition: 0.3s; }
     .stButton>button:hover { background-color: #00FF00 !important; color: #000000 !important; }
     .dice-result { font-size: 1.5rem; font-weight: bold; color: #00FF00; text-align: center; border: 2px dashed #00FF00; padding: 5px; margin-top: 5px; }
+    /* Ensure icons remain visible and green without showing raw text */
+    span[data-testid="stExpanderIcon"] { color: #00FF00 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,7 +83,7 @@ with analytics_context:
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", 
         "🆕 Patch Notes & Roadmap", 
-        "⚔️ Initiative Tracker", 
+        "🛡️ Initiative Tracker", # Icon changed to Shield
         "🎙️ Audio Scribe", 
         "📚 PDF-Lore Chat", 
         "🤝 Matchmaker", 
@@ -120,7 +123,7 @@ with analytics_context:
         st.success("🔥 **MAJOR UPDATE: THE MASTERWORK EDITION**")
         st.markdown("""
         ### 🚀 Live Today
-        * **⚔️ Initiative Tracker:** Track combat order with ease. Add, remove, and sort combatants on the fly.
+        * **🛡️ Initiative Tracker:** Track combat order with ease. Add, remove, and sort combatants on the fly.
         * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper. No more manual note-taking.
         * **📚 PDF-Lore Chat:** Talk to your homebrew PDFs. Search your campaign world instantly.
         * **📤 VTT Exports:** Foundry VTT support for Encounters and Loot.
@@ -129,8 +132,8 @@ with analytics_context:
         * **🎨 Image Generation:** Visualizing your NPCs, items, and monsters.
         """)
 
-    elif page == "⚔️ Initiative Tracker":
-        st.title("⚔️ Combat Theatre: Initiative Tracker")
+    elif page == "🛡️ Initiative Tracker":
+        st.title("🛡️ Combat Theatre: Initiative Tracker")
         st.markdown("Add players and enemies to track turn order automatically.")
         
         with st.expander("➕ Add Combatant", expanded=True):
