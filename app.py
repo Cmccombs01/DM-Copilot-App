@@ -221,27 +221,30 @@ with streamlit_analytics.track():
             st.markdown("### Got an idea for a new tool?")
             user_feedback = st.text_area("What features should we add next?", height=100)
             
-if st.button("Submit Feedback"):
-            from streamlit_gsheets import GSheetsConnection
+            if st.button("Submit Feedback"):
+                from streamlit_gsheets import GSheetsConnection
+                
+                # Connect to the Google Sheet
+                conn = st.connection("gsheets", type=GSheetsConnection)
+                
+                # Create the new row of data
+                new_data = pd.DataFrame({
+                    "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+                    "Stars": [star_rating],
+                    "Feedback": [user_feedback]
+                })
+                
+                # Read the existing sheet, add the new row, and update the cloud
+                existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5)
+                existing_data = existing_data.dropna(how="all") # Clean up any empty rows
+                updated_data = pd.concat([existing_data, new_data], ignore_index=True)
+                conn.update(worksheet="Sheet1", data=updated_data)
+                
+                st.success("The ravens have delivered your message! It is now permanently recorded in your Grimoire.")            
             
-            # Connect to the Google Sheet
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            
-            # Create the new row of data
-            new_data = pd.DataFrame({
-                "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                "Stars": [star_rating],
-                "Feedback": [user_feedback]
-            })
-            
-            # Read the existing sheet, add the new row, and update the cloud
-            existing_data = conn.read(worksheet="Sheet1", usecols=list(range(3)), ttl=5)
-            existing_data = existing_data.dropna(how="all") # Clean up any empty rows
-            updated_data = pd.concat([existing_data, new_data], ignore_index=True)
-            conn.update(worksheet="Sheet1", data=updated_data)
-            st.success("The ravens have delivered your message! It is now permanently recorded in your Grimoire.")            
- st.markdown("</div>", unsafe_allow_html=True)                       
- st.markdown("---")
+            st.markdown("</div>", unsafe_allow_html=True)                       
+        
+        st.markdown("---")
         with st.expander("📊 Data Analyst Export (Admin View)"):
             st.write("Download the raw telemetry data to plug into Tableau or Excel.")
             if os.path.exists("telemetry_feedback.csv"):
@@ -292,9 +295,3 @@ if st.button("Submit Feedback"):
 
     st.sidebar.markdown("---")
     st.sidebar.download_button("📥 Export Session Log", st.session_state.session_log, file_name="DM_Log.txt", width="stretch")
-
-
-
-
-
-
