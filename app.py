@@ -75,12 +75,12 @@ with analytics_context:
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
-    # --- 🔑 OPENAI KEY VERIFIER ---
+    # --- 🔑 OPENAI KEY VERIFIER (Safety Patch) ---
     openai_key = st.secrets.get("OPENAI_API_KEY")
     if not openai_key:
-        st.sidebar.error("❌ OpenAI Key not found in Secrets!")
+        st.sidebar.error("❌ OpenAI Key is missing or broken in Secrets!")
     else:
-        st.sidebar.success("✅ OpenAI Engine Ready")
+        st.sidebar.success("✅ OpenAI Engine Armed")
 
     st.sidebar.markdown("---")
     page = st.sidebar.radio("Navigation", [
@@ -101,19 +101,6 @@ with analytics_context:
         "💰 Loot Hoard", 
         "📫 Give Feedback"
     ])
-
-    # --- 🎲 SIDEBAR DICE ROLLER ---
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🎲 Quick-Roll")
-    d_col1, d_col2 = st.sidebar.columns(2)
-    with d_col1:
-        if st.button("d20"): st.session_state.last_roll = f"d20: {random.randint(1, 20)}"
-        if st.button("d10"): st.session_state.last_roll = f"d10: {random.randint(1, 10)}"
-    with d_col2:
-        if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
-        if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
-    if "last_roll" in st.session_state:
-        st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
 
     # --- PAGE LOGIC ---
     if page == "📜 DM's Guide":
@@ -170,7 +157,7 @@ with analytics_context:
         
         if st.button("Forge Image"):
             if not openai_key:
-                st.error("❌ Cannot generate image: OpenAI API Key is missing from Streamlit Secrets.")
+                st.error("❌ Action blocked: OpenAI Key is missing from Streamlit Secrets.")
             elif img_prompt:
                 with st.spinner("Channeling artistic energy..."):
                     try:
