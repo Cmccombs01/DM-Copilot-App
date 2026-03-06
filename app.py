@@ -128,7 +128,6 @@ with analytics_context:
         if st.button("Build Encounter"):
             prompt = f"Design a D&D 5e combat encounter for level {e_lvl}. Theme: {e_theme}. Include monsters with HP and AC."
             st.session_state.ai_outputs["enc"] = get_ai_response(prompt, llm_provider, user_api_key)
-            # Simulate the Graph Data based on input
             st.session_state.ai_outputs["graph_data"] = pd.DataFrame({
                 "Monster": ["Minion", "Elite", "Boss"],
                 "HP": [random.randint(5, 15), random.randint(30, 60), random.randint(80, 150)],
@@ -139,6 +138,20 @@ with analytics_context:
             if "graph_data" in st.session_state.ai_outputs:
                 st.write("## 📊 Encounter Difficulty Graph")
                 st.scatter_chart(st.session_state.ai_outputs["graph_data"], x="CR", y="HP", color="Monster")
+
+    elif page == "🏰 Dungeon Map Generator":
+        st.title("🏰 Tactical Dungeon Map Generator")
+        map_style = st.selectbox("Style", ["Classic Stone", "Overgrown", "Volcanic", "Ice Vault"])
+        if st.button("Generate Layout"):
+            # Procedural grid generation
+            grid = ["".join(random.choices([".", "#", "?"], weights=[75, 20, 5], k=12)) for _ in range(12)]
+            st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
+            prompt = f"Describe a tactical D&D battlemap for a {map_style} dungeon. Include 2 tactical hazards (like cover or traps) and 1 sensory detail."
+            st.session_state.ai_outputs["map_desc"] = get_ai_response(prompt, llm_provider, user_api_key)
+        
+        if "map_grid" in st.session_state.ai_outputs:
+            st.code(st.session_state.ai_outputs["map_grid"])
+            st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs.get('map_desc', '')}</div>", unsafe_allow_html=True)
 
     elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
@@ -170,14 +183,6 @@ with analytics_context:
             st.session_state.ai_outputs["npc"] = get_ai_response(f"Create a {npc_race} D&D NPC with a secret motivation.", llm_provider, user_api_key)
         if "npc" in st.session_state.ai_outputs:
             st.markdown(f"<div class='stat-card'>{st.session_state.ai_outputs['npc']}</div>", unsafe_allow_html=True)
-
-    elif page == "🏰 Dungeon Map Generator":
-        st.title("🏰 Tactical Dungeon Map Generator")
-        if st.button("Generate Layout"):
-            grid = ["".join(random.choices([".", "#", "?"], weights=[70, 20, 10], k=10)) for _ in range(10)]
-            st.session_state.ai_outputs["map_grid"] = "\n".join(grid)
-        if "map_grid" in st.session_state.ai_outputs:
-            st.code(st.session_state.ai_outputs["map_grid"])
 
     elif page == "🧩 Trap Architect":
         st.title("🧩 Trap Architect")
