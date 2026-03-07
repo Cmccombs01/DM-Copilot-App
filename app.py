@@ -37,10 +37,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- ⚙️ HELPER LOGIC ---
-if 'session_log' not in st.session_state:
-    st.session_state.session_log = f"--- DM Co-Pilot Session Log ({datetime.now().strftime('%Y-%m-%d')}) ---\n"
-if 'ai_outputs' not in st.session_state:
-    st.session_state.ai_outputs = {}
 if 'combatants' not in st.session_state:
     st.session_state.combatants = []
 
@@ -82,16 +78,15 @@ with analytics_context:
     page = st.sidebar.radio("Navigation", [
         "📜 DM's Guide", 
         "🆕 Patch Notes", 
+        "📜 Session Recap",
         "🛡️ Initiative Tracker",
         "🐉 Monster Bestiary",
         "🎨 Image Generator", 
-        "🎙️ Audio Scribe", 
         "📚 PDF-Lore Chat", 
         "⚔️ Encounter Architect", 
         "🍻 Tavern Rumor Mill", 
         "💰 Dynamic Shops", 
-        "💎 Magic Item Artificer", 
-        "📫 Give Feedback"
+        "💎 Magic Item Artificer"
     ])
 
     st.sidebar.markdown("---")
@@ -99,13 +94,29 @@ with analytics_context:
 
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
-        st.markdown("<div class='stat-card'>### System Online\nSelect a tool from the sidebar to begin.</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='stat-card'>
+        ### System Online
+        **Developer:** Caleb McCombs | Microsoft & Springboard Certified Analyst
+        <br>Bridge the gap between raw data and legendary storytelling.
+        </div>
+        """, unsafe_allow_html=True)
+        st.info("Select a tool from the sidebar to begin. Analytics available at bottom with ?analytics=on")
 
     elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
-        st.info("📣 **BYOK Model Implemented:** To keep the app free, Image and Audio tools now use your own OpenAI API keys.")
-        st.success("✅ **NEW: Monster Bestiary Integration!** Search 400+ monsters and sync them to initiative.")
-        st.success("📝 **v2.2 Update:** Added 'Download Stat Block' feature to the Bestiary for physical table prep.")
+        st.success("✅ **v2.3 Update:** Added AI Session Chronicler for player recaps!")
+        st.success("✅ **v2.2 Update:** Monster Bestiary now includes text stat block exports.")
+
+    elif page == "📜 Session Recap":
+        st.title("📜 AI Session Chronicler")
+        st.info("Paste your raw notes (NPCs, loot, kills) and I'll forge a professional recap.")
+        raw_notes = st.text_area("Your Notes:", height=200)
+        if st.button("Generate Recap"):
+            prompt = f"Summarize these notes into a dramatic recap for players with sections for 'Major Events', 'Loot', and 'Remaining Mysteries':\n\n{raw_notes}"
+            recap = get_ai_response(prompt, llm_provider, user_api_key)
+            st.markdown(f"<div class='stat-card'>{recap}</div>", unsafe_allow_html=True)
+            st.download_button("📥 Download Recap", recap, file_name="session_recap.txt")
 
     elif page == "🛡️ Initiative Tracker":
         st.title("🛡️ Initiative Tracker v2.1")
@@ -115,7 +126,7 @@ with analytics_context:
             init = c2.number_input("Roll", value=10)
             hp = c3.number_input("HP", value=15)
             if st.button("Add"):
-                st.session_state.combatants.append({"name": name, "init": init, "hp": hp, "status": "Healthy"})
+                st.session_state.combatants.append({"name": name, "init": init, "hp": hp})
                 st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
                 st.rerun()
         
@@ -130,53 +141,26 @@ with analytics_context:
 
     elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (SRD)")
-        search_query = st.text_input("Search for a monster (e.g., 'Beholder', 'Orc', 'Dragon')")
-        
+        search_query = st.text_input("Search monster...")
         if search_query:
-            with st.spinner("Searching ancient scrolls..."):
-                try:
-                    response = requests.get(f"https://api.open5e.com/monsters/?search={search_query}")
-                    if response.status_code == 200:
-                        results = response.json().get('results', [])
-                        if results:
-                            for monster in results[:5]:
-                                with st.container():
-                                    st.markdown(f"### {monster['name']} (CR: {monster['challenge_rating']})")
-                                    st.write(f"**HP:** {monster['hit_points']} | **AC:** {monster['armor_class']} | **Speed:** {monster['speed']}")
-                                    st.write(f"*Size:* {monster['size']} {monster['type']} ({monster['alignment']})")
-                                    
-                                    col_a, col_b = st.columns(2)
-                                    with col_a:
-                                        if st.button(f"➕ Add {monster['name']} to Initiative", key=f"add_{monster['slug']}"):
-                                            st.session_state.combatants.append({
-                                                "name": monster['name'], 
-                                                "init": random.randint(1, 20), 
-                                                "hp": monster['hit_points'], 
-                                                "status": "Healthy"
-                                            })
-                                            st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
-                                            st.success(f"{monster['name']} joined the fray!")
-                                    
-                                    with col_b:
-                                        monster_stats_text = f"{monster['name']} (CR: {monster['challenge_rating']})\nHP: {monster['hit_points']} | AC: {monster['armor_class']}\nSpeed: {monster['speed']} | Size: {monster['size']}\nType: {monster['type']}\n\nDescription: {monster.get('description', 'No description available.')}"
-                                        st.download_button(
-                                            label=f"📥 Download {monster['name']} Stats",
-                                            data=monster_stats_text,
-                                            file_name=f"{monster['slug']}_stats.txt",
-                                            mime="text/plain",
-                                            key=f"dl_{monster['slug']}"
-                                        )
-                                    st.markdown("---")
-                        else:
-                            st.warning("No monsters found.")
-                    else:
-                        st.error("Connection to Bestiary API failed.")
-                except Exception as e:
-                    st.error(f"Error fetching data: {e}")
+            response = requests.get(f"https://api.open5e.com/monsters/?search={search_query}")
+            if response.status_code == 200:
+                results = response.json().get('results', [])
+                for monster in results[:3]:
+                    st.markdown(f"### {monster['name']} (CR: {monster['challenge_rating']})")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button(f"➕ Add to Initiative", key=f"add_{monster['slug']}"):
+                            st.session_state.combatants.append({"name": monster['name'], "init": random.randint(1,20), "hp": monster['hit_points']})
+                            st.success(f"{monster['name']} added!")
+                    with c2:
+                        data = f"{monster['name']}\nHP: {monster['hit_points']} | AC: {monster['armor_class']}\n{monster.get('description', '')}"
+                        st.download_button("📥 Download Stats", data, file_name=f"{monster['slug']}.txt")
+                    st.markdown("---")
 
     elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
-        prompt = st.text_area("Description")
+        prompt = st.text_area("Art Prompt:")
         if st.button("Forge Image"):
             if not openai_key: st.error("Enter OpenAI Key in Sidebar")
             else:
@@ -186,22 +170,11 @@ with analytics_context:
 
     elif page == "📚 PDF-Lore Chat":
         st.title("📚 PDF-Lore Chat")
-        pdf = st.file_uploader("Upload Lore", type="pdf")
-        q = st.text_input("Ask a question:")
+        pdf = st.file_uploader("Upload PDF", type="pdf")
+        q = st.text_input("Question:")
         if pdf and q and st.button("Query"):
             reader = PyPDF2.PdfReader(pdf)
             text = "".join([p.extract_text() for p in reader.pages[:3]])
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
 
-    # --- 🎲 QUICK DICE ROLLER ---
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🎲 Quick-Roll")
-    d_col1, d_col2 = st.sidebar.columns(2)
-    with d_col1:
-        if st.button("d20"): st.session_state.last_roll = f"d20: {random.randint(1, 20)}"
-        if st.button("d10"): st.session_state.last_roll = f"d10: {random.randint(1, 10)}"
-    with d_col2:
-        if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
-        if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
-    if "last_roll" in st.session_state:
-        st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
+    streamlit_analytics.show_results()
