@@ -105,6 +105,7 @@ with analytics_context:
         st.title("🆕 Patch Notes")
         st.info("📣 **BYOK Model Implemented:** To keep the app free, Image and Audio tools now use your own OpenAI API keys.")
         st.success("✅ **NEW: Monster Bestiary Integration!** Search 400+ monsters and sync them to initiative.")
+        st.success("📝 **v2.2 Update:** Added 'Download Stat Block' feature to the Bestiary for physical table prep.")
 
     elif page == "🛡️ Initiative Tracker":
         st.title("🛡️ Initiative Tracker v2.1")
@@ -144,15 +145,27 @@ with analytics_context:
                                     st.write(f"**HP:** {monster['hit_points']} | **AC:** {monster['armor_class']} | **Speed:** {monster['speed']}")
                                     st.write(f"*Size:* {monster['size']} {monster['type']} ({monster['alignment']})")
                                     
-                                    if st.button(f"➕ Add {monster['name']} to Initiative", key=monster['slug']):
-                                        st.session_state.combatants.append({
-                                            "name": monster['name'], 
-                                            "init": random.randint(1, 20), 
-                                            "hp": monster['hit_points'], 
-                                            "status": "Healthy"
-                                        })
-                                        st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
-                                        st.success(f"{monster['name']} joined the fray!")
+                                    col_a, col_b = st.columns(2)
+                                    with col_a:
+                                        if st.button(f"➕ Add {monster['name']} to Initiative", key=f"add_{monster['slug']}"):
+                                            st.session_state.combatants.append({
+                                                "name": monster['name'], 
+                                                "init": random.randint(1, 20), 
+                                                "hp": monster['hit_points'], 
+                                                "status": "Healthy"
+                                            })
+                                            st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
+                                            st.success(f"{monster['name']} joined the fray!")
+                                    
+                                    with col_b:
+                                        monster_stats_text = f"{monster['name']} (CR: {monster['challenge_rating']})\nHP: {monster['hit_points']} | AC: {monster['armor_class']}\nSpeed: {monster['speed']} | Size: {monster['size']}\nType: {monster['type']}\n\nDescription: {monster.get('description', 'No description available.')}"
+                                        st.download_button(
+                                            label=f"📥 Download {monster['name']} Stats",
+                                            data=monster_stats_text,
+                                            file_name=f"{monster['slug']}_stats.txt",
+                                            mime="text/plain",
+                                            key=f"dl_{monster['slug']}"
+                                        )
                                     st.markdown("---")
                         else:
                             st.warning("No monsters found.")
