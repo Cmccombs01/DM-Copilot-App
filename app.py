@@ -101,7 +101,7 @@ with analytics_context:
         <br>Bridge the gap between raw data and legendary storytelling.
         </div>
         """, unsafe_allow_html=True)
-        st.info("Select a tool from the sidebar to begin. Analytics available at bottom with ?analytics=on")
+       st.info("Select a tool from the sidebar to begin your adventure.")
 
     elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
@@ -189,6 +189,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
