@@ -101,7 +101,7 @@ with analytics_context:
         <br>Bridge the gap between raw data and legendary storytelling.
         </div>
         """, unsafe_allow_html=True)
-       st.info("Select a tool from the sidebar to begin your adventure.")
+        st.info("Select a tool from the sidebar to begin your adventure.")
 
     elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
@@ -176,10 +176,10 @@ with analytics_context:
             reader = PyPDF2.PdfReader(pdf)
             text = "".join([p.extract_text() for p in reader.pages[:3]])
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
-# --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
+
+    # --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
     st.sidebar.markdown("---")
     if st.sidebar.checkbox("🛠️ Admin Dashboard"):
-        # This keeps your 1,350+ impressions private from the public
         password = st.sidebar.text_input("Enter Dev Password", type="password")
         if password == "Caleb2026": 
             try:
@@ -189,7 +189,3 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
-
-
-
