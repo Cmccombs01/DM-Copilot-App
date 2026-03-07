@@ -176,5 +176,11 @@ with analytics_context:
             reader = PyPDF2.PdfReader(pdf)
             text = "".join([p.extract_text() for p in reader.pages[:3]])
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
+# --- 📊 SAFE ANALYTICS VIEW ---
+    if st.sidebar.checkbox("🛠️ Show Dev Analytics"):
+        try:
+            streamlit_analytics.show_results()
+        except Exception as e:
+            st.sidebar.error("Analytics temporarily offline during surge.")
+  
 
-    streamlit_analytics.show_results()
