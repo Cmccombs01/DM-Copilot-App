@@ -75,10 +75,17 @@ with analytics_context:
     llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
     user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
     
-    # --- 🔑 OPENAI KEY VERIFIER (Safety Patch) ---
-    openai_key = st.secrets.get("OPENAI_API_KEY")
+    # --- 🔑 OPENAI BYOK VERIFIER (Bring Your Own Key) ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎨 Premium Tools")
+    st.sidebar.caption("Due to high traffic, Image & Audio tools currently require your own key. (See Patch Notes)")
+    user_openai_key = st.sidebar.text_input("OpenAI API Key", type="password", help="DALL-E 3 & Whisper require an OpenAI Key. Get yours at platform.openai.com")
+    
+    # Prioritize user input, fallback to dev secret if empty
+    openai_key = user_openai_key if user_openai_key else st.secrets.get("OPENAI_API_KEY")
+
     if not openai_key:
-        st.sidebar.error("❌ OpenAI Key is missing or broken in Secrets!")
+        st.sidebar.warning("⚠️ OpenAI Key needed for Art & Audio")
     else:
         st.sidebar.success("✅ OpenAI Engine Armed")
 
@@ -102,6 +109,29 @@ with analytics_context:
         "📫 Give Feedback"
     ])
 
+    # --- ☕ TIP JAR: BUY ME A COFFEE ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style="text-align: center;">
+        <a href="https://www.buymeacoffee.com/cmccombs01" target="_blank">
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" >
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- 🎲 SIDEBAR DICE ROLLER ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎲 Quick-Roll")
+    d_col1, d_col2 = st.sidebar.columns(2)
+    with d_col1:
+        if st.button("d20"): st.session_state.last_roll = f"d20: {random.randint(1, 20)}"
+        if st.button("d10"): st.session_state.last_roll = f"d10: {random.randint(1, 10)}"
+    with d_col2:
+        if st.button("d12"): st.session_state.last_roll = f"d12: {random.randint(1, 12)}"
+        if st.button("d8"): st.session_state.last_roll = f"d8: {random.randint(1, 8)}"
+    if "last_roll" in st.session_state:
+        st.sidebar.markdown(f"<div class='dice-result'>{st.session_state.last_roll}</div>", unsafe_allow_html=True)
+
     # --- PAGE LOGIC ---
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
@@ -110,11 +140,21 @@ with analytics_context:
     elif page == "🆕 Patch Notes & Roadmap":
         st.title("🆕 Patch Notes & Roadmap")
         st.success("🔥 **MAJOR UPDATE: THE MASTERWORK v2.0 EDITION**")
+        
+        # --- NEW ANNOUNCEMENT BLOCK ---
+        st.info("""
+        📣 **DEV UPDATE ON API KEYS:** Wow, the traffic today has been insane! Thank you all for checking out the app. Because image generation (DALL-E 3) and audio transcription are expensive, my personal API budget hit its limit today. 
+        
+        To keep the core tools (like the Initiative Tracker and Generators) 100% free, the **Image Artificer** and **Audio Scribe** now require you to plug in your own OpenAI API key in the sidebar. 
+        
+        If you guys would rather I handle the API costs for everyone, I would have to charge a small subscription fee to use the app to cover it. Let me know what you prefer in the **📫 Give Feedback** tab! For now, the power is in your hands.
+        """)
+        
         st.markdown("""
         ### 🚀 Live Today
         * **🛡️ Initiative Tracker v2.0:** Now tracks Max HP and Status Conditions for every combatant.
-        * **🎨 AI Image Artificer:** Generate visual art for your characters and items using DALL-E 3.
-        * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper.
+        * **🎨 AI Image Artificer:** Generate visual art for your characters and items using DALL-E 3. *(Requires own OpenAI Key)*
+        * **🎙️ Audio Scribe:** AI-powered session summaries via Whisper. *(Requires own OpenAI Key)*
         * **📚 PDF-Lore Chat:** Talk directly to your homebrew PDFs.
         """)
 
@@ -152,12 +192,12 @@ with analytics_context:
 
     elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
-        st.markdown("Visualize your NPCs, monsters, or legendary items using DALL-E 3.")
+        st.markdown("Visualize your NPCs, monsters, or legendary items using DALL-E 3. *(Requires your own OpenAI API Key in the sidebar)*")
         img_prompt = st.text_area("Describe the image (e.g., 'A battle-scarred Orc chieftain in heavy plate armor, digital art style')")
         
         if st.button("Forge Image"):
             if not openai_key:
-                st.error("❌ Action blocked: OpenAI Key is missing from Streamlit Secrets.")
+                st.error("❌ Action blocked: Please enter a valid OpenAI API Key in the sidebar.")
             elif img_prompt:
                 with st.spinner("Channeling artistic energy..."):
                     try:
@@ -171,10 +211,11 @@ with analytics_context:
 
     elif page == "🎙️ Audio Scribe":
         st.title("🎙️ Audio Scribe")
+        st.markdown("*(Requires your own OpenAI API Key in the sidebar)*")
         audio_file = st.file_uploader("Upload Session Audio", type=["mp3", "wav", "m4a"])
         if audio_file and st.button("Transcribe"):
             if not openai_key:
-                st.error("❌ OpenAI Key missing.")
+                st.error("❌ OpenAI Key missing. Enter it in the sidebar.")
             else:
                 with st.spinner("Processing..."):
                     client = OpenAI(api_key=openai_key)
