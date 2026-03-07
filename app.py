@@ -113,7 +113,7 @@ with analytics_context:
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
     <div style="text-align: center;">
-        <a href="https://www.buymeacoffee.com/cmccombs01" target="_blank">
+        <a href="https://buymeacoffee.com/calebmccombs" target="_blank">
             <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" >
         </a>
     </div>
