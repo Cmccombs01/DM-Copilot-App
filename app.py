@@ -87,20 +87,26 @@ def get_ai_response(prompt, llm_provider, user_api_key):
 
 # --- 🚀 MAIN APP & DATABASE INIT ---
 try:
-    # 1. Load the secrets from Streamlit
-    firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    # 1. Grab the secret (Streamlit already makes it a dictionary!)
+    firestore_key = dict(st.secrets["GOOGLE_CREDENTIALS"])
+    
     # 2. Write the secrets to a temporary physical file for the analytics library
+    import json
     with open("temp_firestore_key.json", "w") as f:
         json.dump(firestore_key, f)
+        
     # 3. Start the Analytics using the physical file path
     analytics_context = streamlit_analytics.track(firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
-    # 4. Create custom Database Connection for the Vault using the dictionary
+    
+    # 4. Create custom Database Connection for the Vault
     creds = service_account.Credentials.from_service_account_info(firestore_key)
-    db = firestore.Client(credentials=creds, project=firestore_key["project_id"])
+    db = firestore.Client(credentials=creds, project=firestore_key.get("project_id", "dm-copilot-analytics"))
 except Exception as e:
     st.error(f"Database connection failed: {e}")
-    analytics_context = streamlit_analytics.track()
-    db = None # Failsafe if secrets are missing
+    # BULLETPROOF FALLBACK: If analytics fails, bypass it entirely so the app survives
+    import contextlib
+    analytics_context = contextlib.nullcontext()
+    db = None
 
 with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
@@ -442,3 +448,4 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
