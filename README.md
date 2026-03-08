@@ -1,30 +1,24 @@
-# 🐉 DM Co-Pilot | Masterwork Edition
-**An AI-Powered Toolkit for Dungeon Masters**
+# 🐉 DM Co-Pilot: Masterwork Edition
+**An AI-powered web application designed to automate D&D 5e session prep, featuring live telemetry, VTT integration, and a cloud-based community vault.**
 
-DM Co-Pilot is a comprehensive, free-to-use Streamlit web application designed to help Dungeon Masters drastically reduce their session prep time and seamlessly manage their live games. 
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Google Cloud Firestore](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
 
-With the release of the **Masterwork v2.0 Update**, the app now supports advanced tactical tracking and OpenAI integration!
+## 🚀 The Project
+I built **DM Co-Pilot** to solve a real-world problem: Dungeon Master burnout. This tool bridges the gap between raw data and legendary storytelling, cutting session prep time by 80%. 
 
-## 🔥 What's New in Masterwork v2.0?
-* **Advanced Initiative Tracker:** A fully integrated combat tracker that manages Turn Order, Initiative Rolls, Max HP, and 14 different D&D 5e Status Conditions.
-* **🎨 AI Image Artificer (BYOK):** Visualize your NPCs, monsters, or legendary items instantly using DALL-E 3.
-* **🎙️ Audio Scribe (BYOK):** Upload your live session audio (`.mp3`, `.wav`) and let OpenAI's Whisper model transcribe and summarize your entire session.
-* **📚 PDF-Lore Chat:** Upload your homebrew PDFs and chat directly with your own lore to instantly recall town names, NPC backgrounds, and histories.
+Recently, the app experienced a viral traffic surge across multiple TTRPG communities, logging over 4.5 hours of continuous user engagement in a single afternoon. I live-patched the servers, deployed backend analytics, and shipped user-requested features mid-surge.
 
-> **Note on Premium Tools (BYOK):** Due to high viral traffic, the Image Artificer and Audio Scribe currently require users to input their own OpenAI API Key in the sidebar to cover generation costs. The core app remains 100% free!
+## 🛠️ Key Features
+* **⚔️ Encounter Architect & VTT Export:** Generates perfectly balanced D&D 5e encounters using AI, and instantly exports them as `.json` files for seamless integration into Foundry VTT.
+* **📊 Live Product Analytics:** Integrated `streamlit-analytics2` to track granular widget interactions and pageviews, allowing for data-driven feature development.
+* **🏛️ Community Vault:** A live Google Cloud Firestore database where users can permanently publish and download generated monsters, encounters, and items.
+* **🧠 "Bring Your Own Key" (BYOK) Architecture:** Integrated Groq (Llama 3) for lightning-fast free generation, while allowing premium users to plug in their own OpenAI API keys for DALL-E 3 image generation.
 
-## 🛠️ Core Generators (100% Free)
-* **⚔️ Encounter Architect:** Build balanced encounters with optional "Boss Mode" scaling.
-* **🤝 Campaign Matchmaker:** Generate campaign pitches based on player preferences.
-* **🏰 Dungeon Map Generator:** Create tactical ASCII battlemaps with AI descriptions.
-* **🍻 Tavern Rumor Mill:** Generate localized rumors (one true, one false, one dangerously misleading).
-* **💰 Dynamic Shops & Loot:** Instantly generate quirky shopkeepers, store inventories, and CR-scaled loot hoards.
-* **🧩 Trap & NPC Quick-Forge:** Quickly construct traps and fully fleshed-out NPCs on the fly.
-* **💎 Magic Item Artificer:** Design magic items from Common to Legendary, with optional narrative curses.
-
-## 📥 Export & Save
-DMs can easily download their entire generated session as a markdown (`.md`) file or export the raw raw text log to keep their campaign grimoires perfectly organized.
-
-## 🤝 Support the Project
-If this app saved your D&D session this week, consider tossing a coin to the dev!
-[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/calebmccombs)
+## 📈 The Data Science Case Study
+This repository is more than just an app; it is a live data engineering project. You can view the full Jupyter Notebook case study [Link to your notebook or portfolio here] detailing how I:
+1. Extracted NoSQL document data from Google Cloud Firestore using Python.
+2. Cleaned and parsed nested dictionary telemetry logs using `pandas`.
+3. Visualized user navigation trends with `matplotlib` to identify the most popular AI tools.
