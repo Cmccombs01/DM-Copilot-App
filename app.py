@@ -270,6 +270,38 @@ with analytics_context:
             text = "".join([p.extract_text() for p in reader.pages[:3]])
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
 
+    # --- ⚔️ NEW: ENCOUNTER ARCHITECT ---
+    elif page == "⚔️ Encounter Architect":
+        st.title("⚔️ Encounter Architect & VTT Export")
+        st.markdown("Generate balanced encounters and export them directly to your Virtual Tabletop.")
+        
+        c1, c2, c3 = st.columns(3)
+        party_level = c1.number_input("Average Party Level", min_value=1, max_value=20, value=5)
+        party_size = c2.number_input("Number of Players", min_value=1, max_value=10, value=4)
+        difficulty = c3.selectbox("Difficulty", ["Easy", "Medium", "Hard", "Deadly", "Boss Mode"])
+        
+        environment = st.text_input("Environment / Theme (e.g., Volcano, Swamp, Undead Crypt)")
+        
+        if st.button("Generate Encounter 🎲"):
+            if not environment: environment = "Generic"
+            prompt = f"Create a D&D 5e {difficulty} encounter for {party_size} level {party_level} players in a {environment} environment. Include the monster names, their CR, a brief tactical description of the terrain, and the total XP. Provide stat blocks if it's a Boss Mode."
+            
+            with st.spinner("Forging encounter..."):
+                encounter_text = get_ai_response(prompt, llm_provider, user_api_key)
+                
+            st.markdown(f"<div class='stat-card'>{encounter_text}</div>", unsafe_allow_html=True)
+            
+            # --- FOUNDRY VTT EXPORT LOGIC ---
+            vtt_data = {
+                "name": f"{difficulty} {environment} Encounter",
+                "type": "encounter",
+                "description": encounter_text,
+                "level": party_level,
+                "players": party_size
+            }
+            vtt_json = json.dumps(vtt_data, indent=4)
+            st.download_button("📥 Export for Foundry VTT (.json)", data=vtt_json, file_name=f"{environment.lower().replace(' ', '_')}_encounter.json", mime="application/json")
+
     # --- 🏛️ NEW: COMMUNITY VAULT LOGIC ---
     elif page == "🏛️ Community Vault":
         st.title("🏛️ The Community Vault")
@@ -323,6 +355,49 @@ with analytics_context:
                     st.info("The Vault is currently empty. Be the first to publish something!")
             except Exception as e:
                 st.error(f"Could not load the Vault. Error: {e}")
+
+    # --- 🍻 NEW: TAVERN RUMOR MILL ---
+    elif page == "🍻 Tavern Rumor Mill":
+        st.title("🍻 Tavern Rumor Mill")
+        st.info("Generate 3 rumors for your players to overhear: One true, one false, and one dangerously misleading.")
+        location = st.text_input("Town, Tavern, or NPC Name:")
+        
+        if st.button("Listen at the Bar 🍺") and location:
+            prompt = f"Generate 3 short, punchy D&D rumors overheard in or around '{location}'. 1 must be completely true, 1 must be totally false, and 1 must be a dangerous half-truth. Do not label which is which in the output, just present them as dialogue from patrons."
+            
+            with st.spinner("Eavesdropping..."):
+                rumors = get_ai_response(prompt, llm_provider, user_api_key)
+                
+            st.markdown(f"<div class='stat-card'>{rumors}</div>", unsafe_allow_html=True)
+
+    # --- 💰 NEW: DYNAMIC SHOPS ---
+    elif page == "💰 Dynamic Shops":
+        st.title("💰 Dynamic Shops")
+        st.markdown("Generate quirky shopkeepers and instant inventory tables with GP prices.")
+        shop_type = st.selectbox("Shop Type", ["Blacksmith", "Alchemist", "General Store", "Magic Item Broker", "Shady Fence"])
+        
+        if st.button("Open Shop 🛒"):
+            prompt = f"Create a D&D 5e {shop_type}. Provide a brief description of a quirky shopkeeper, and a markdown table containing 5-7 items for sale with their prices in GP."
+            
+            with st.spinner("Stocking shelves..."):
+                shop_data = get_ai_response(prompt, llm_provider, user_api_key)
+                
+            st.markdown(f"<div class='stat-card'>{shop_data}</div>", unsafe_allow_html=True)
+
+    # --- 💎 NEW: MAGIC ITEM ARTIFICER ---
+    elif page == "💎 Magic Item Artificer":
+        st.title("💎 Cursed Magic Item Artificer")
+        st.markdown("Generate powerful magic items your players will *want* to use, attached to deeply unsettling narrative curses.")
+        item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Ring", "Wondrous Item", "Staff/Wand"])
+        rarity = st.selectbox("Rarity", ["Uncommon", "Rare", "Very Rare", "Legendary"])
+        
+        if st.button("Forge Item 🔨"):
+            prompt = f"Create a {rarity} D&D 5e magic {item_type}. Give it an ominous name, a highly desirable mechanical benefit, and a subtle, unsettling curse that forces a tough roleplay choice. Format with clear headers."
+            
+            with st.spinner("Infusing magic..."):
+                magic_item = get_ai_response(prompt, llm_provider, user_api_key)
+                
+            st.markdown(f"<div class='stat-card'>{magic_item}</div>", unsafe_allow_html=True)
 
     # --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
     st.sidebar.markdown("---")
