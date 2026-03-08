@@ -32,38 +32,25 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="�
 @st.cache_data
 def load_bestiary():
     try:
-        import requests
         import pandas as pd
         
-        # 1. BULLETPROOF FETCH: Fake browser header and longer timeout
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get("https://api.open5e.com/monsters/?limit=400", headers=headers, timeout=20)
+        # 1. BULLETPROOF LOCAL FETCH: No APIs, no timeouts, no IP bans.
+        # This reads the file sitting right next to app.py in your GitHub repo!
+        df = pd.read_json("srd_5e_monsters.json")
         
-        # 2. Extract data safely
-        data = response.json()
-        if 'results' not in data:
-            return pd.DataFrame()
-            
-        df = pd.DataFrame(data['results'])
-        
-        # 3. Safe rename (only renames columns if they actually exist to prevent crashes)
-        rename_map = {"challenge_rating": "cr", "hit_points": "hp", "armor_class": "ac"}
+        # 2. Rename the JSON columns to match our exact variables
+        rename_map = {"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"}
         df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
         
-        # 4. Bulletproof actions parser
-        def parse_actions(action_list):
-            if not isinstance(action_list, list): return "No actions listed."
-            return "\n\n".join([f"**{a.get('name', 'Action')}:** {a.get('desc', '')}" for a in action_list])
+        # 3. Combine Traits and Actions, and strip HTML tags
+        traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
+        acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
+        df['actions'] = traits + '\n\n' + acts
+        df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
         
-        if 'actions' in df.columns:
-            df['actions'] = df['actions'].apply(parse_actions)
-        else:
-            df['actions'] = "No actions listed."
-            
         return df
     except Exception as e:
-        # STOP HIDING ERRORS IN THE CLOUD LOGS! PRINT IT DIRECTLY TO THE APP!
-        st.error(f"🚨 API CRASH REPORT: {e}") 
+        st.error(f"🚨 LOCAL DATABASE CRASH REPORT: {e}") 
         import pandas as pd
         return pd.DataFrame() 
 
@@ -497,6 +484,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
