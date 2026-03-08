@@ -32,9 +32,26 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="�
 @st.cache_data
 def load_bestiary():
     try:
-        return pd.read_csv("dnd_chars_all.tsv", sep='\t', on_bad_lines='skip')
+        # 1. Point directly to a raw cloud JSON of the official 5e SRD Bestiary
+        url = "https://gist.githubusercontent.com/tkfu/9819e4ac6d529e225e9fc58b358c3479/raw/d4df8804c25a662efc42936db60cfbc0a5b19b53/srd_5e_monsters.json"
+        df = pd.read_json(url)
+        
+        # 2. Rename the JSON columns to match our exact variables
+        df = df.rename(columns={
+            "Challenge": "cr",
+            "Hit Points": "hp",
+            "Armor Class": "ac"
+        })
+        
+        # 3. Combine Traits and Actions, and strip HTML tags
+        traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
+        acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
+        df['actions'] = traits + '\n\n' + acts
+        df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
+        
+        return df
     except Exception:
-        return pd.DataFrame() # Fallback if file is missing
+        return pd.DataFrame() # Fallback if cloud file fails
 
 monster_df = load_bestiary()
 
@@ -135,6 +152,18 @@ with analytics_context:
     st.sidebar.markdown("---")
     st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
 
+    # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎲 Quick Roll")
+    
+    # Put the dropdown and button side-by-side to save space
+    d_col1, d_col2 = st.sidebar.columns([1, 1])
+    dice_type = d_col1.selectbox("Dice", ["d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
+    
+    if d_col2.button("Roll!"):
+        sides = int(dice_type.replace("d", ""))
+        result = random.randint(1, sides)
+        st.sidebar.markdown(f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
         # --- LIVE TELEMETRY DASHBOARD ---
@@ -453,5 +482,6 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
