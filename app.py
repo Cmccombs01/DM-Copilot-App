@@ -87,11 +87,16 @@ def get_ai_response(prompt, llm_provider, user_api_key):
 
 # --- 🚀 MAIN APP & DATABASE INIT ---
 try:
-    # 1. Grab the secret (Streamlit already makes it a dictionary!)
-    firestore_key = dict(st.secrets["GOOGLE_CREDENTIALS"])
+    import json
+    raw_secret = st.secrets["GOOGLE_CREDENTIALS"]
+    
+    # 1. BULLETPROOF AUTH: Handle it whether Streamlit gives us a string OR a dictionary
+    if isinstance(raw_secret, str):
+        firestore_key = json.loads(raw_secret)
+    else:
+        firestore_key = dict(raw_secret)
     
     # 2. Write the secrets to a temporary physical file for the analytics library
-    import json
     with open("temp_firestore_key.json", "w") as f:
         json.dump(firestore_key, f)
         
@@ -448,4 +453,5 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
