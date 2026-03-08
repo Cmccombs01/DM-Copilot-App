@@ -32,29 +32,33 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="�
 @st.cache_data
 def load_bestiary():
     try:
-        # 1. Point directly to a raw cloud JSON of the official 5e SRD Bestiary
         url = "https://gist.githubusercontent.com/tkfu/9819e4ac6d529e225e9fc58b358c3479/raw/d4df8804c25a662efc42936db60cfbc0a5b19b53/srd_5e_monsters.json"
-        df = pd.read_json(url)
         
-        # 2. Rename the JSON columns to match our exact variables
-        df = df.rename(columns={
-            "Challenge": "cr",
-            "Hit Points": "hp",
-            "Armor Class": "ac"
-        })
+        # 1. BULLETPROOF FETCH: Bypass GitHub's bot-blocker using a fake browser signature
+        import requests
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=10)
         
-        # 3. Combine Traits and Actions, and strip HTML tags
+        # 2. Load the JSON into Pandas
+        import pandas as pd
+        df = pd.DataFrame(response.json())
+        
+        # 3. Rename the JSON columns to match our exact variables
+        df = df.rename(columns={"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"})
+        
+        # 4. Combine Traits and Actions, and strip HTML tags
         traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
         acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
         df['actions'] = traits + '\n\n' + acts
         df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
         
         return df
-    except Exception:
-        return pd.DataFrame() # Fallback if cloud file fails
+    except Exception as e:
+        print(f"Bestiary Error: {e}") # This will print the actual error to your cloud logs!
+        import pandas as pd
+        return pd.DataFrame() 
 
 monster_df = load_bestiary()
-
 # --- 🌌 THEME & STYLING ---
 st.markdown("""
 <style>
@@ -283,7 +287,7 @@ with analytics_context:
         
         if search_query:
             if monster_df.empty:
-                 st.error("⚠️ Local Monster Database (dnd_chars_all.tsv) missing! Please upload it to your repository.")
+                 st.error("⚠️ Cloud Monster Database failed to load! GitHub blocked the connection.")
             else:
                 filtered_df = monster_df[monster_df['name'].str.lower().str.contains(search_query, na=False)]
                 
@@ -482,6 +486,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
