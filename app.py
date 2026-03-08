@@ -19,43 +19,51 @@ import streamlit_analytics2.display as sa2_display
 if not hasattr(sa2_display, "original_show_results"):
     sa2_display.original_show_results = sa2_display.show_results
 
+
 def safe_show_results(data, reset_data, unsafe_password):
     safe_data = data.copy()
     safe_data["widgets"] = data.get("widgets", {}).copy()
     return sa2_display.original_show_results(safe_data, reset_data, unsafe_password)
 
+
 sa2_display.show_results = safe_show_results
 
-st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
+st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition",
+                   page_icon="🐉", layout="wide")
 
 # --- ⚡ THE SPEED FIX: Caching the Bestiary in RAM ---
+
+
 @st.cache_data
 def load_bestiary():
     try:
         import pandas as pd
         import json
-        
+
         # 1. BULLETPROOF LOCAL FETCH: Use Python's native JSON reader (ignores blank spaces!)
         with open("srd_5e_monsters.json", "r", encoding="utf-8") as f:
             raw_data = json.load(f)
-            
+
         df = pd.DataFrame(raw_data)
-        
+
         # 2. Rename the JSON columns to match our exact variables
-        rename_map = {"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"}
-        df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
-        
+        rename_map = {"Challenge": "cr",
+            "Hit Points": "hp", "Armor Class": "ac"}
+        df = df.rename(
+            columns={k: v for k, v in rename_map.items() if k in df.columns})
+
         # 3. Combine Traits and Actions, and strip HTML tags
         traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
         acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
         df['actions'] = traits + '\n\n' + acts
         df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
-        
+
         return df
     except Exception as e:
-        st.error(f"🚨 LOCAL DATABASE CRASH REPORT: {e}") 
+        st.error(f"🚨 LOCAL DATABASE CRASH REPORT: {e}")
         import pandas as pd
-        return pd.DataFrame() 
+        return pd.DataFrame()
+
 
 monster_df = load_bestiary()
 # --- 🌌 THEME & STYLING ---
@@ -89,6 +97,7 @@ h1, h2, h3 {
 if 'combatants' not in st.session_state:
     st.session_state.combatants = []
 
+
 def get_ai_response(prompt, llm_provider, user_api_key):
     try:
         if llm_provider == "☁️ Groq (Cloud)":
@@ -97,37 +106,43 @@ def get_ai_response(prompt, llm_provider, user_api_key):
                 return "⚠️ Please enter your Groq API Key in the sidebar."
             from groq import Groq
             client = Groq(api_key=api_key)
-            res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
+            res = client.chat.completions.create(messages=[
+                                                 {"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
         else:
             import ollama
-            res = ollama.chat(model="llama3.1", messages=[{"role": "user", "content": prompt}])['message']['content']
+            res = ollama.chat(model="llama3.1", messages=[
+                              {"role": "user", "content": prompt}])['message']['content']
         return res
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
 
 # --- 🚀 MAIN APP & DATABASE INIT ---
 try:
     import json
     raw_secret = st.secrets["GOOGLE_CREDENTIALS"]
-    
+
     # 1. BULLETPROOF AUTH: Handle it whether Streamlit gives us a string OR a dictionary
     if isinstance(raw_secret, str):
         firestore_key = json.loads(raw_secret)
     else:
         firestore_key = dict(raw_secret)
-    
+
    # 2. BULLETPROOF FILE CREATION: Prevent multi-user race conditions
     import os
     if not os.path.exists("temp_firestore_key.json") or os.path.getsize("temp_firestore_key.json") == 0:
         with open("temp_firestore_key.json", "w") as f:
             json.dump(firestore_key, f)
-        
+
     # 3. Start the Analytics using the physical file path
-    analytics_context = streamlit_analytics.track(firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
-    
+    analytics_context = streamlit_analytics.track(
+        firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
+
     # 4. Create custom Database Connection for the Vault
-    creds = service_account.Credentials.from_service_account_info(firestore_key)
-    db = firestore.Client(credentials=creds, project=firestore_key.get("project_id", "dm-copilot-analytics"))
+    creds = service_account.Credentials.from_service_account_info(
+        firestore_key)
+    db = firestore.Client(credentials=creds, project=firestore_key.get(
+        "project_id", "dm-copilot-analytics"))
 except Exception as e:
     st.error(f"Database connection failed: {e}")
     # BULLETPROOF FALLBACK: If analytics fails, bypass it entirely so the app survives
@@ -136,25 +151,29 @@ except Exception as e:
     db = None
 
 with analytics_context:
-    st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
-    llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
-    user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
-    
+    st.sidebar.markdown(
+        "<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
+    llm_provider = st.sidebar.radio(
+        "Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
+    user_api_key = st.sidebar.text_input(
+        "Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎨 Premium Tools")
     st.sidebar.caption("BYOK Mode Active")
     user_openai_key = st.sidebar.text_input("OpenAI API Key", type="password")
-    openai_key = user_openai_key if user_openai_key else st.secrets.get("OPENAI_API_KEY")
-    
+    openai_key = user_openai_key if user_openai_key else st.secrets.get(
+        "OPENAI_API_KEY")
+
     st.sidebar.markdown("---")
 page = st.sidebar.radio("Navigation", [
-        "📜 DM's Guide", 
-        "🆕 Patch Notes", 
-        "📜 Session Recap", 
-        "🛡️ Initiative Tracker", 
-        "🐉 Monster Bestiary", 
-        "🎨 Image Generator", 
-        "📚 PDF-Lore Chat", 
+        "📜 DM's Guide",
+        "🆕 Patch Notes",
+        "📜 Session Recap",
+        "🛡️ Initiative Tracker",
+        "🐉 Monster Bestiary",
+        "🎨 Image Generator",
+        "📚 PDF-Lore Chat",
         "⚔️ Encounter Architect",
         "🎭 NPC Quick Forge",
         "⚙️ Trap Architect",
@@ -165,35 +184,38 @@ page = st.sidebar.radio("Navigation", [
         "🤖 DM Assistant",
         "🤝 DM Matchmaker",
         "🧬 Homebrew Forge",
-        "🏛️ Community Vault", 
-        "🍻 Tavern Rumor Mill", 
-        "💰 Dynamic Shops", 
+        "🏛️ Community Vault",
+        "🍻 Tavern Rumor Mill",
+        "💰 Dynamic Shops",
         "💎 Magic Item Artificer",
         "⭐ Give Feedback"
     ])
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
 
     # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🎲 Quick Roll")
-    
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🎲 Quick Roll")
+
     # Put the dropdown and button side-by-side to save space
-    d_col1, d_col2 = st.sidebar.columns([1, 1])
-    dice_type = d_col1.selectbox("Dice", ["d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
-    if d_col2.button("Roll!"):
+d_col1, d_col2 = st.sidebar.columns([1, 1])
+dice_type = d_col1.selectbox("Dice", [
+                             "d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
+if d_col2.button("Roll!"):
         sides = int(dice_type.replace("d", ""))
         result = random.randint(1, sides)
-        st.sidebar.markdown(f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
+        st.sidebar.markdown(
+            f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
 
-    if page == "📜 DM's Guide":
+if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
         # --- LIVE TELEMETRY DASHBOARD ---
         st.markdown("### 📡 System Telemetry")
         c1, c2, c3 = st.columns(3)
-        c1.metric(label="Active DMs (Global)", value="450+", delta="Viral Surge")
-        
+        c1.metric(label="Active DMs (Global)",
+                  value="450+", delta="Viral Surge")
+
         # Dynamically pull the total number of Vault items
         vault_count = "Offline"
         if db is not None:
@@ -202,8 +224,10 @@ page = st.sidebar.radio("Navigation", [
                 vault_count = sum(1 for _ in docs)
             except Exception:
                 vault_count = "Error"
-        c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
-        c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
+        c2.metric(label="Vault Creations",
+                  value=vault_count, delta="Live Database")
+        c3.metric(label="Server Status", value="Online",
+                  delta="By Groq & Ollama")
         st.divider()
 
         # --- THE WELCOME HOOK ---
@@ -214,7 +238,7 @@ page = st.sidebar.radio("Navigation", [
         Welcome to the Masterwork Edition. I built this tool to bridge the gap between raw data and legendary storytelling, cutting your session prep time by 80%.
         </div>
         """, unsafe_allow_html=True)
-        
+
         # --- 🏆 NEW: HALL OF FAME (TOP CONTRIBUTORS) ---
         st.markdown("### 👑 Hall of Fame: Top Contributors")
         if db is not None:
@@ -227,16 +251,18 @@ page = st.sidebar.radio("Navigation", [
                     creator = data.get("creator", "Anonymous DM").strip()
                     if creator.lower() != "anonymous dm" and creator != "":
                         creator_counts[creator] += 1
-                
+
                 top_creators = creator_counts.most_common(3)
                 if top_creators:
                     cols = st.columns(3)
                     for i, (creator, count) in enumerate(top_creators):
                         # Add a gold, silver, bronze medal logic
                         medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                        cols[i].info(f"{medal} **{creator}**\n\n📜 {count} Creations")
+                        cols[i].info(
+                            f"{medal} **{creator}**\n\n📜 {count} Creations")
                 else:
-                    st.info("The leaderboard is waiting for its first legends. Publish an item to claim the #1 spot!")
+                    st.info(
+                        "The leaderboard is waiting for its first legends. Publish an item to claim the #1 spot!")
             except Exception as e:
                 st.error("Could not load Hall of Fame.")
         st.divider()
@@ -246,10 +272,12 @@ page = st.sidebar.radio("Navigation", [
         st.markdown("You aren't prepping in a vacuum. Join hundreds of DMs sharing their most devious creations. Every monster you forge, every curse you weave, and every encounter you publish helps the entire community level up.")
         if db is not None:
             try:
-                latest_item = db.collection("community_vault").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(1).stream()
+                latest_item = db.collection("community_vault").order_by(
+                    "timestamp", direction=firestore.Query.DESCENDING).limit(1).stream()
                 for doc in latest_item:
                     data = doc.to_dict()
-                    st.success(f"🔥 **Latest Vault Addition:** *{data.get('title', 'Untitled')}* (A {data.get('type', 'Creation')} by {data.get('creator', 'a fellow DM')}) - Check the Vault tab to download it!")
+                    st.success(
+                        f"🔥 **Latest Vault Addition:** *{data.get('title', 'Untitled')}* (A {data.get('type', 'Creation')} by {data.get('creator', 'a fellow DM')}) - Check the Vault tab to download it!")
             except Exception:
                 pass
         st.divider()
@@ -262,13 +290,13 @@ page = st.sidebar.radio("Navigation", [
         * **🛡️ Initiative Tracker:** Throw out your scratchpad. Track HP, rolls, and turn order right here in the browser.
         """)
 
-    elif page == "🆕 Patch Notes":
+elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
         st.success("✅ **v2.4 Update:** Lightning-fast local Bestiary caching & improved search logic!")
         st.success("✅ **v2.3 Update:** Added AI Session Chronicler for player recaps!")
         st.success("✅ **v2.2 Update:** Monster Bestiary now includes text stat block exports.")
 
-    elif page == "📜 Session Recap":
+elif page == "📜 Session Recap":
         st.title("📜 AI Session Chronicler")
         st.info("Paste your raw notes (NPCs, loot, kills) and I'll forge a professional recap.")
         raw_notes = st.text_area("Your Notes:", height=200)
@@ -278,7 +306,7 @@ page = st.sidebar.radio("Navigation", [
             st.markdown(f"<div class='stat-card'>{recap}</div>", unsafe_allow_html=True)
             st.download_button("📥 Download Recap", recap, file_name="session_recap.txt")
 
-    elif page == "🛡️ Initiative Tracker":
+elif page == "🛡️ Initiative Tracker":
         st.title("🛡️ Initiative Tracker v2.1")
         with st.expander("➕ Add Combatant"):
             c1, c2, c3 = st.columns(3)
@@ -300,7 +328,7 @@ page = st.sidebar.radio("Navigation", [
                 st.rerun()
 
     # --- 🐛 THE GOBLIN BUG FIX & ⚡ THE SPEED FIX ---
-    elif page == "🐉 Monster Bestiary":
+elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (SRD Database)")
         search_query = st.text_input("Search monster...").strip().lower()
         
@@ -342,7 +370,7 @@ page = st.sidebar.radio("Navigation", [
                             st.markdown(f"**Traits / Actions:**\n{actions_val}")
                         st.markdown("---")
 
-    elif page == "🎨 Image Generator":
+elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
         prompt = st.text_area("Art Prompt:")
         if st.button("Forge Image"):
@@ -353,7 +381,7 @@ page = st.sidebar.radio("Navigation", [
                 response = client.images.generate(model="dall-e-3", prompt=prompt)
                 st.image(response.data[0].url)
 
-    elif page == "📚 PDF-Lore Chat":
+elif page == "📚 PDF-Lore Chat":
         st.title("📚 PDF-Lore Chat")
         pdf = st.file_uploader("Upload PDF", type="pdf")
         q = st.text_input("Question:")
@@ -363,7 +391,7 @@ page = st.sidebar.radio("Navigation", [
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
 
     # --- ⚔️ NEW: ENCOUNTER ARCHITECT ---
-    elif page == "⚔️ Encounter Architect":
+elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect & VTT Export")
         st.markdown("Generate balanced encounters and export them directly to your Virtual Tabletop.")
         
@@ -384,13 +412,13 @@ page = st.sidebar.radio("Navigation", [
                 encounter_text = get_ai_response(prompt, llm_provider, user_api_key)
                 st.markdown(f"<div class='stat-card'>{encounter_text}</div>", unsafe_allow_html=True)
                 # --- 📈 RESTORED: ENCOUNTER TENSION GRAPH ---
-                    st.markdown("### 📈 Expected Tension Curve")
-                    import pandas as pd
-                    chart_data = pd.DataFrame({
+                st.markdown("### 📈 Expected Tension Curve")
+                import pandas as pd
+                chart_data = pd.DataFrame({
                         "Rounds": ["Round 1 (Opening)", "Round 2 (Escalation)", "Round 3 (Climax)", "Round 4 (Resolution)"],
                         "Tension Level": [40, 75, 100, 25]
                     }).set_index("Rounds")
-                    st.line_chart(chart_data)
+                st.line_chart(chart_data)
                 
                 # --- FOUNDRY VTT EXPORT LOGIC ---
                 vtt_data = {
@@ -410,7 +438,7 @@ page = st.sidebar.radio("Navigation", [
                 )
 
     # --- 🏛️ NEW: COMMUNITY VAULT LOGIC ---
-    elif page == "🏛️ Community Vault":
+elif page == "🏛️ Community Vault":
         st.title("🏛️ The Community Vault")
         st.markdown("Welcome to the Vault! Share your best generated monsters, encounters, and items with the 400+ DMs using DM Co-Pilot.")
 
@@ -464,7 +492,7 @@ page = st.sidebar.radio("Navigation", [
                 st.error(f"Could not load the Vault. Error: {e}")
 
     # --- 🍻 NEW: TAVERN RUMOR MILL ---
-    elif page == "🍻 Tavern Rumor Mill":
+elif page == "🍻 Tavern Rumor Mill":
         st.title("🍻 Tavern Rumor Mill")
         st.info("Generate 3 rumors for your players to overhear: One true, one false, and one dangerously misleading.")
         
@@ -476,7 +504,7 @@ page = st.sidebar.radio("Navigation", [
                 st.markdown(f"<div class='stat-card'>{rumors}</div>", unsafe_allow_html=True)
 
     # --- 💰 NEW: DYNAMIC SHOPS ---
-    elif page == "💰 Dynamic Shops":
+elif page == "💰 Dynamic Shops":
         st.title("💰 Dynamic Shops")
         st.markdown("Generate quirky shopkeepers and instant inventory tables with GP prices.")
         shop_type = st.selectbox("Shop Type", ["Blacksmith", "Alchemist", "General Store", "Magic Item Broker", "Shady Fence"])
@@ -488,7 +516,7 @@ page = st.sidebar.radio("Navigation", [
                 st.markdown(f"<div class='stat-card'>{shop_data}</div>", unsafe_allow_html=True)
 
     # --- 💎 NEW: MAGIC ITEM ARTIFICER ---
-    elif page == "💎 Magic Item Artificer":
+elif page == "💎 Magic Item Artificer":
         st.title("💎 Cursed Magic Item Artificer")
         st.markdown("Generate powerful magic items your players will *want* to use, attached to deeply unsettling narrative curses.")
         
@@ -502,7 +530,7 @@ page = st.sidebar.radio("Navigation", [
                 st.markdown(f"<div class='stat-card'>{magic_item}</div>", unsafe_allow_html=True)
 
 # --- 🔄 THE GREAT RESTORATION PATCH (Missing Tabs) ---
-    elif page == "🎭 NPC Quick Forge":
+elif page == "🎭 NPC Quick Forge":
         st.title("🎭 NPC Quick Forge")
         npc_type = st.text_input("Profession or Role (e.g., Tavern Keeper, Shady Guard)")
         if st.button("Forge NPC"):
@@ -510,48 +538,48 @@ page = st.sidebar.radio("Navigation", [
                 prompt = f"Create a D&D 5e NPC who is a {npc_type}. Give them a name, appearance, a distinct quirk, a hidden secret, and a quote."
                 st.markdown(f"<div class='stat-card'>{get_ai_response(prompt, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "⚙️ Trap Architect":
+elif page == "⚙️ Trap Architect":
         st.title("⚙️ Trap Architect")
         danger = st.selectbox("Lethality", ["Nuisance", "Dangerous", "Deadly"])
         if st.button("Build Trap"):
             with st.spinner("Setting trigger..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Create a {danger} D&D 5e trap. Include the trigger, the effect/damage, and how players can spot and disarm it.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "📜 Scribe's Handouts":
+elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
         topic = st.text_area("What is the letter, journal, or bounty about?")
         if st.button("Write Handout"):
             with st.spinner("Scribing..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Write an immersive, in-universe D&D handout about: {topic}', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "🗑️ Pocket Trash Loot":
+elif page == "🗑️ Pocket Trash Loot":
         st.title("🗑️ Pocket Trash Loot")
         if st.button("Search the bodies..."):
             with st.spinner("Searching..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response('Generate 5 weird, mundane, or slightly gross trinkets you would find in a goblin or bandit pocket. No magic items.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "👑 The Dragon's Hoard":
+elif page == "👑 The Dragon's Hoard":
         st.title("👑 The Dragon's Hoard")
         hoard_cr = st.selectbox("Target CR Hoard", ["0-4", "5-10", "11-16", "17+"])
         if st.button("Generate Hoard"):
             with st.spinner("Counting gold..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Generate a D&D 5e treasure hoard for CR {hoard_cr}. Include coins, gems, art objects, and 2-3 appropriate magic items.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "🌍 Worldbuilder":
+elif page == "🌍 Worldbuilder":
         st.title("🌍 Worldbuilder Co-Pilot")
         focus = st.selectbox("What are we building?", ["Town/City", "Faction/Guild", "Pantheon/Deity", "Lost Ruin"])
         if st.button("Build World"):
             with st.spinner("Shaping the world..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Create a detailed D&D 5e lore entry for a {focus}. Include history, notable figures, and a current conflict.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "🤖 DM Assistant":
+elif page == "🤖 DM Assistant":
         st.title("🤖 DM Assistant")
         question = st.text_area("Ask any D&D ruling or prep question:")
         if st.button("Consult Assistant"):
             with st.spinner("Thinking..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(question, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    elif page == "🤝 DM Matchmaker":
+elif page == "🤝 DM Matchmaker":
         st.title("🤝 DM Matchmaker")
         st.info("Looking for a group? Drop your details below to connect with other players and DMs.")
         st.text_input("Discord Handle")
@@ -561,14 +589,14 @@ page = st.sidebar.radio("Navigation", [
             st.success("Board updated! (Simulated for now until we connect the live Matchmaker DB)")
             st.balloons()
 
-    elif page == "⭐ Give Feedback":
+elif page == "⭐ Give Feedback":
         st.title("⭐ Give Feedback")
         rating = st.slider("How would you rate DM Co-Pilot?", 1, 5, 5)
         st.text_area("Any suggestions or bugs?")
         if st.button("Submit Feedback"):
             st.success(f"Thank you for the {rating}-star rating! Feedback logged to the cloud.")
             
-    elif page == "🧬 Homebrew Forge":
+elif page == "🧬 Homebrew Forge":
         st.title("🧬 Homebrew Monster Forge")
         st.markdown("Paste your raw monster notes, stats, or chaotic ideas below. The AI will forge it into a perfectly formatted 5e stat block ready for the Community Vault.")
         c1, c2 = st.columns([1, 2])
@@ -588,8 +616,8 @@ page = st.sidebar.radio("Navigation", [
             else:
                 st.warning("⚠️ Please provide some raw notes or ideas to forge!")
     # --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
-    st.sidebar.markdown("---")
-    if st.sidebar.checkbox("🛠️ Admin Dashboard"):
+st.sidebar.markdown("---")
+if st.sidebar.checkbox("🛠️ Admin Dashboard"):
         password = st.sidebar.text_input("Enter Dev Password", type="password")
         if password == "Caleb2026":
             try:
@@ -599,7 +627,6 @@ page = st.sidebar.radio("Navigation", [
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
 
 
 
