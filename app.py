@@ -171,9 +171,9 @@ page = st.sidebar.radio("Navigation", [
         "💎 Magic Item Artificer",
         "⭐ Give Feedback"
     ])
-                         
-st.sidebar.markdown("---")
-st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
 
     # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
     st.sidebar.markdown("---")
@@ -182,11 +182,11 @@ st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacof
     # Put the dropdown and button side-by-side to save space
     d_col1, d_col2 = st.sidebar.columns([1, 1])
     dice_type = d_col1.selectbox("Dice", ["d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
-    
     if d_col2.button("Roll!"):
         sides = int(dice_type.replace("d", ""))
         result = random.randint(1, sides)
         st.sidebar.markdown(f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
+
     if page == "📜 DM's Guide":
         st.title("📜 Welcome to the DM Co-Pilot")
         # --- LIVE TELEMETRY DASHBOARD ---
@@ -599,6 +599,7 @@ st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacof
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
