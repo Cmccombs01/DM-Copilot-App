@@ -170,9 +170,9 @@ page = st.sidebar.radio("Navigation", [
         "💰 Dynamic Shops", 
         "💎 Magic Item Artificer",
         "⭐ Give Feedback"
-    ])
-    
-    st.sidebar.markdown("---")
+    ]
+                         
+st.sidebar.markdown("---")
     st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
 
     # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
@@ -599,6 +599,7 @@ page = st.sidebar.radio("Navigation", [
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
