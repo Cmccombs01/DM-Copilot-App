@@ -33,10 +33,13 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="üê
 def load_bestiary():
     try:
         import pandas as pd
+        import json
         
-        # 1. BULLETPROOF LOCAL FETCH: No APIs, no timeouts, no IP bans.
-        # This reads the file sitting right next to app.py in your GitHub repo!
-        df = pd.read_json("srd_5e_monsters.json")
+        # 1. BULLETPROOF LOCAL FETCH: Use Python's native JSON reader (ignores blank spaces!)
+        with open("srd_5e_monsters.json", "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+            
+        df = pd.DataFrame(raw_data)
         
         # 2. Rename the JSON columns to match our exact variables
         rename_map = {"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"}
@@ -484,6 +487,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
