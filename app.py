@@ -9,6 +9,10 @@ import requests
 import PyPDF2 
 from openai import OpenAI 
 
+# --- NEW: FIRESTORE IMPORTS FOR THE VAULT ---
+from google.oauth2 import service_account
+from google.cloud import firestore
+
 # --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
 import streamlit_analytics2.display as sa2_display
 if not hasattr(sa2_display, "original_show_results"):
@@ -55,12 +59,22 @@ def get_ai_response(prompt, llm_provider, user_api_key):
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-# --- 🚀 MAIN APP ---
+# --- 🚀 MAIN APP & DATABASE INIT ---
 try:
+    # 1. Load the secrets
     firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    
+    # 2. Start the Analytics
     analytics_context = streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic")
-except Exception:
+    
+    # 3. Create custom Database Connection for the Vault
+    creds = service_account.Credentials.from_service_account_info(firestore_key)
+    db = firestore.Client(credentials=creds, project=firestore_key["project_id"])
+
+except Exception as e:
+    st.error(f"Database connection failed: {e}")
     analytics_context = streamlit_analytics.track()
+    db = None # Failsafe if secrets are missing
 
 with analytics_context:
     st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
@@ -83,7 +97,8 @@ with analytics_context:
         "🐉 Monster Bestiary",
         "🎨 Image Generator", 
         "📚 PDF-Lore Chat", 
-        "⚔️ Encounter Architect", 
+        "⚔️ Encounter Architect",
+        "🏛️ Community Vault", 
         "🍻 Tavern Rumor Mill", 
         "💰 Dynamic Shops", 
         "💎 Magic Item Artificer"
@@ -176,6 +191,60 @@ with analytics_context:
             reader = PyPDF2.PdfReader(pdf)
             text = "".join([p.extract_text() for p in reader.pages[:3]])
             st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
+
+    # --- 🏛️ NEW: COMMUNITY VAULT LOGIC ---
+    elif page == "🏛️ Community Vault":
+        st.title("🏛️ The Community Vault")
+        st.markdown("Welcome to the Vault! Share your best generated monsters, encounters, and items with the 400+ DMs using DM Co-Pilot.")
+        
+        if db is None:
+            st.error("Database connection offline. Cannot access the Vault.")
+        else:
+            with st.expander("➕ Publish a New Creation", expanded=False):
+                creator_name = st.text_input("Your DM Name / Handle", value="Anonymous DM")
+                creation_title = st.text_input("Name of this Creation", placeholder="e.g., The Shadow Goblin Ambush")
+                creation_type = st.selectbox("Type", ["Monster", "Encounter", "Loot Hoard", "Magic Item"])
+                creation_content = st.text_area("Paste the Content/JSON here:")
+                
+                if st.button("Publish to Vault 🚀"):
+                    if creation_title and creation_content:
+                        try:
+                            doc_ref = db.collection("community_vault").document()
+                            doc_ref.set({
+                                "creator": creator_name,
+                                "title": creation_title,
+                                "type": creation_type,
+                                "content": creation_content,
+                                "timestamp": firestore.SERVER_TIMESTAMP
+                            })
+                            st.success(f"Legendary! '{creation_title}' is now in the Community Vault.")
+                            st.balloons()
+                        except Exception as e:
+                            st.error(f"Failed to publish. Error: {e}")
+                    else:
+                        st.warning("Please provide a title and content!")
+            
+            st.divider()
+            
+            st.subheader("🔍 Browse Community Creations")
+            if st.button("🔄 Refresh Vault"):
+                pass 
+                
+            try:
+                vault_docs = db.collection("community_vault").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(10).stream()
+                
+                found_items = False
+                for doc in vault_docs:
+                    found_items = True
+                    data = doc.to_dict()
+                    with st.expander(f"{data.get('type', 'Item')} | {data.get('title', 'Untitled')} (by {data.get('creator', 'Unknown')})"):
+                        st.text(data.get('content', 'No content available.'))
+                        st.download_button("📥 Download", data.get('content', ''), file_name=f"{data.get('title', 'vault_item')}.txt", key=doc.id)
+                
+                if not found_items:
+                    st.info("The Vault is currently empty. Be the first to publish something!")
+            except Exception as e:
+                st.error(f"Could not load the Vault. Error: {e}")
 
     # --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
     st.sidebar.markdown("---")
