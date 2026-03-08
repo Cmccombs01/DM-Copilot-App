@@ -35,31 +35,35 @@ def load_bestiary():
         import requests
         import pandas as pd
         
-        # 1. BULLETPROOF FETCH: Pull directly from the official D&D API (No GitHub IP bans!)
-        # We pull the first 400 monsters (which covers the entire standard SRD bestiary)
-        response = requests.get("https://api.open5e.com/monsters/?limit=400", timeout=15)
+        # 1. BULLETPROOF FETCH: Fake browser header and longer timeout
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get("https://api.open5e.com/monsters/?limit=400", headers=headers, timeout=20)
         
-        # 2. Extract the actual monster list from the JSON results
-        monsters = response.json().get('results', [])
-        df = pd.DataFrame(monsters)
+        # 2. Extract data safely
+        data = response.json()
+        if 'results' not in data:
+            return pd.DataFrame()
+            
+        df = pd.DataFrame(data['results'])
         
-        # 3. Rename columns to match our app's exact variables
-        df = df.rename(columns={
-            "challenge_rating": "cr",
-            "hit_points": "hp",
-            "armor_class": "ac"
-        })
+        # 3. Safe rename (only renames columns if they actually exist to prevent crashes)
+        rename_map = {"challenge_rating": "cr", "hit_points": "hp", "armor_class": "ac"}
+        df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
         
-        # 4. Safely parse the API's nested action dictionaries into clean Markdown text
+        # 4. Bulletproof actions parser
         def parse_actions(action_list):
             if not isinstance(action_list, list): return "No actions listed."
             return "\n\n".join([f"**{a.get('name', 'Action')}:** {a.get('desc', '')}" for a in action_list])
-            
-        df['actions'] = df['actions'].apply(parse_actions)
         
+        if 'actions' in df.columns:
+            df['actions'] = df['actions'].apply(parse_actions)
+        else:
+            df['actions'] = "No actions listed."
+            
         return df
     except Exception as e:
-        print(f"Bestiary Error: {e}") 
+        # STOP HIDING ERRORS IN THE CLOUD LOGS! PRINT IT DIRECTLY TO THE APP!
+        st.error(f"🚨 API CRASH REPORT: {e}") 
         import pandas as pd
         return pd.DataFrame() 
 
@@ -292,7 +296,7 @@ with analytics_context:
         
         if search_query:
             if monster_df.empty:
-                 st.error("⚠️ Cloud Monster Database failed to load! GitHub blocked the connection.")
+                 st.warning("⚠️ Database is empty. Check the API Crash Report at the top of the page.")
             else:
                 filtered_df = monster_df[monster_df['name'].str.lower().str.contains(search_query, na=False)]
                 
@@ -491,6 +495,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
