@@ -61,13 +61,17 @@ def get_ai_response(prompt, llm_provider, user_api_key):
 
 # --- 🚀 MAIN APP & DATABASE INIT ---
 try:
-    # 1. Load the secrets
+    # 1. Load the secrets from Streamlit
     firestore_key = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     
-    # 2. Start the Analytics
-    analytics_context = streamlit_analytics.track(firestore_key_file=firestore_key, firestore_collection_name="dm_copilot_traffic")
+    # 2. Write the secrets to a temporary physical file for the analytics library
+    with open("temp_firestore_key.json", "w") as f:
+        json.dump(firestore_key, f)
+        
+    # 3. Start the Analytics using the physical file path
+    analytics_context = streamlit_analytics.track(firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
     
-    # 3. Create custom Database Connection for the Vault
+    # 4. Create custom Database Connection for the Vault using the dictionary
     creds = service_account.Credentials.from_service_account_info(firestore_key)
     db = firestore.Client(credentials=creds, project=firestore_key["project_id"])
 
