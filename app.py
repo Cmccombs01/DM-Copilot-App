@@ -126,9 +126,11 @@ try:
     else:
         firestore_key = dict(raw_secret)
     
-    # 2. Write the secrets to a temporary physical file for the analytics library
-    with open("temp_firestore_key.json", "w") as f:
-        json.dump(firestore_key, f)
+   # 2. BULLETPROOF FILE CREATION: Prevent multi-user race conditions
+    import os
+    if not os.path.exists("temp_firestore_key.json") or os.path.getsize("temp_firestore_key.json") == 0:
+        with open("temp_firestore_key.json", "w") as f:
+            json.dump(firestore_key, f)
         
     # 3. Start the Analytics using the physical file path
     analytics_context = streamlit_analytics.track(firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
@@ -495,6 +497,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
