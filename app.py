@@ -32,29 +32,34 @@ st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="üê
 @st.cache_data
 def load_bestiary():
     try:
-        url = "https://gist.githubusercontent.com/tkfu/9819e4ac6d529e225e9fc58b358c3479/raw/d4df8804c25a662efc42936db60cfbc0a5b19b53/srd_5e_monsters.json"
-        
-        # 1. BULLETPROOF FETCH: Bypass GitHub's bot-blocker using a fake browser signature
         import requests
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        # 2. Load the JSON into Pandas
         import pandas as pd
-        df = pd.DataFrame(response.json())
         
-        # 3. Rename the JSON columns to match our exact variables
-        df = df.rename(columns={"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"})
+        # 1. BULLETPROOF FETCH: Pull directly from the official D&D API (No GitHub IP bans!)
+        # We pull the first 400 monsters (which covers the entire standard SRD bestiary)
+        response = requests.get("https://api.open5e.com/monsters/?limit=400", timeout=15)
         
-        # 4. Combine Traits and Actions, and strip HTML tags
-        traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
-        acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
-        df['actions'] = traits + '\n\n' + acts
-        df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
+        # 2. Extract the actual monster list from the JSON results
+        monsters = response.json().get('results', [])
+        df = pd.DataFrame(monsters)
+        
+        # 3. Rename columns to match our app's exact variables
+        df = df.rename(columns={
+            "challenge_rating": "cr",
+            "hit_points": "hp",
+            "armor_class": "ac"
+        })
+        
+        # 4. Safely parse the API's nested action dictionaries into clean Markdown text
+        def parse_actions(action_list):
+            if not isinstance(action_list, list): return "No actions listed."
+            return "\n\n".join([f"**{a.get('name', 'Action')}:** {a.get('desc', '')}" for a in action_list])
+            
+        df['actions'] = df['actions'].apply(parse_actions)
         
         return df
     except Exception as e:
-        print(f"Bestiary Error: {e}") # This will print the actual error to your cloud logs!
+        print(f"Bestiary Error: {e}") 
         import pandas as pd
         return pd.DataFrame() 
 
@@ -486,6 +491,7 @@ with analytics_context:
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
