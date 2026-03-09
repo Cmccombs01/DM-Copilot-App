@@ -544,24 +544,44 @@ elif page == "💰 Dynamic Shops":
 
     # --- 💎 NEW: MAGIC ITEM ARTIFICER ---
 elif page == "💎 Magic Item Artificer":
-        st.title("💎 Cursed Magic Item Artificer")
-        st.markdown("Generate powerful magic items your players will *want* to use, attached to deeply unsettling narrative curses.")
+        st.title("💎 Magic Item Artificer")
+        st.markdown("Forge legendary artifacts with structured data ready for VTT item sheets.")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Wondrous Item", "Ring", "Staff", "Potion"])
+        with col2:
+            rarity = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"])
         
-        item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Ring", "Wondrous Item", "Staff/Wand"])
-        rarity = st.selectbox("Rarity", ["Uncommon", "Rare", "Very Rare", "Legendary"])
-        custom_flavor = st.text_area("Custom Flavor (Optional)", placeholder="e.g., A jagged obsidian longsword haunted by a ghost...")
-        
+        custom_details = st.text_area("Item Concept", placeholder="e.g., A dagger made of frozen shadow that bleeds cold...")
+
         if st.button("Forge Item 🔨"):
-            with st.spinner("Infusing magic..."):
-                prompt = f"Create a {rarity} D&D 5e magic {item_type}. "
-                if custom_flavor:
-                    prompt += f"Incorporate these ideas: {custom_flavor}. "
-                prompt += "Give it an ominous name, a highly desirable mechanical benefit, and a subtle, unsettling curse that forces a tough roleplay choice. Format with clear headers."
-                
-                magic_item = get_ai_response(prompt, llm_provider, user_api_key)
-                st.markdown(f"<div class='stat-card'>{magic_item}</div>", unsafe_allow_html=True)
-                # Adds the VTT-friendly download button for items
-                st.download_button("📥 Download Item Stats", magic_item, file_name=f"magic_item_{rarity.lower()}.txt")
+            with st.spinner("Channeling arcane energy..."):
+                prompt = f"Create a D&D 5e {rarity} {item_type}. Concept: {custom_details}. "
+                prompt += """
+                Return ONLY a valid JSON object with these keys: 
+                'name', 'type', 'rarity', 'properties' (list), 'description', 'attunement' (boolean).
+                Do not include markdown backticks or extra text.
+                """
+                raw_json = get_ai_response(prompt, llm_provider, user_api_key)
+                # This uses the 'artificer_json' bank we set up on Line 96
+                st.session_state.artificer_json = raw_json.replace("```json", "").replace("```", "").strip()
+
+        # Display from memory (This keeps it on screen during tab switches!)
+        if st.session_state.artificer_json:
+            try:
+                import json
+                item_data = json.loads(st.session_state.artificer_json)
+                st.json(item_data)
+                st.download_button(
+                    label="📥 Download Item JSON",
+                    data=st.session_state.artificer_json,
+                    file_name="magic_item.json",
+                    mime="application/json"
+                )
+            except:
+                st.error("The weave flickered. Try forging again.")
+                st.write("Debug info:", st.session_state.artificer_json)
 
 # --- 🔄 THE GREAT RESTORATION PATCH (Missing Tabs) ---
 elif page == "🎭 NPC Quick Forge":
@@ -664,6 +684,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
