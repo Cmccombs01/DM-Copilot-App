@@ -247,8 +247,8 @@ if page == "📜 DM's Guide":
         * **💎 Artificer:** Forge magic items that persist across your entire session.
         * **🛡️ Tracker:** Run combat effortlessly with our built-in Initiative & HP tracker.
         """)
-
-    elif page == "🆕 Patch Notes":
+        
+elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
         st.success("✅ **v2.5 Update:** Masterwork Persistence! Added Global Session Memory to the Bestiary and Artificer.")
         st.success("✅ **v2.4 Update:** VTT Data Pipeline integrated for structured JSON exports.")
@@ -636,9 +636,3 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
-
-
-
-
-
