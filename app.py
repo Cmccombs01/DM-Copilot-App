@@ -522,12 +522,19 @@ elif page == "💎 Magic Item Artificer":
         
         item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Ring", "Wondrous Item", "Staff/Wand"])
         rarity = st.selectbox("Rarity", ["Uncommon", "Rare", "Very Rare", "Legendary"])
+        custom_flavor = st.text_area("Custom Flavor (Optional)", placeholder="e.g., A jagged obsidian longsword haunted by a ghost...")
         
         if st.button("Forge Item 🔨"):
-            prompt = f"Create a {rarity} D&D 5e magic {item_type}. Give it an ominous name, a highly desirable mechanical benefit, and a subtle, unsettling curse that forces a tough roleplay choice. Format with clear headers."
             with st.spinner("Infusing magic..."):
+                prompt = f"Create a {rarity} D&D 5e magic {item_type}. "
+                if custom_flavor:
+                    prompt += f"Incorporate these ideas: {custom_flavor}. "
+                prompt += "Give it an ominous name, a highly desirable mechanical benefit, and a subtle, unsettling curse that forces a tough roleplay choice. Format with clear headers."
+                
                 magic_item = get_ai_response(prompt, llm_provider, user_api_key)
                 st.markdown(f"<div class='stat-card'>{magic_item}</div>", unsafe_allow_html=True)
+                # Adds the VTT-friendly download button for items
+                st.download_button("📥 Download Item Stats", magic_item, file_name=f"magic_item_{rarity.lower()}.txt")
 
 # --- 🔄 THE GREAT RESTORATION PATCH (Missing Tabs) ---
 elif page == "🎭 NPC Quick Forge":
@@ -630,3 +637,4 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
