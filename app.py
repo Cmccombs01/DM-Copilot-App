@@ -199,6 +199,35 @@ page = st.sidebar.radio("Navigation", [
 
 st.sidebar.markdown("---")
 st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
+# --- DISCORD COMMUNITY HUB ---
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    """
+    <div style="text-align: center;">
+        <p style="color: #00FF00; font-family: 'MedievalSharp', cursive; margin-bottom: 10px; font-size: 1.1rem;">The Deep-Delver's Grimoire</p>
+        <a href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" style="text-decoration: none;">
+            <div style="
+                background-color: #5865F2;
+                color: white;
+                padding: 12px;
+                border-radius: 8px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                border: 2px solid #00FF00;
+                transition: 0.3s;
+                box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);">
+                <img src="https://assets-global.website-files.com/6257adef93467e05d00d8c2d/636e0a2249aa57ef0c345678_Full%20Logo%20White.png" width="22" style="filter: brightness(0) invert(1);">
+                ENTER THE DISCORD
+            </div>
+        </a>
+        <p style="font-size: 0.85rem; color: #00FF00; margin-top: 10px; font-family: monospace; letter-spacing: 1px;">FORGE • SHARE • SURVIVE</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
     # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
 st.sidebar.markdown("---")
@@ -636,3 +665,4 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
