@@ -93,9 +93,15 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- ⚙️ HELPER LOGIC ---
+# --- ⚙️ HELPER LOGIC & GLOBAL MEMORY ---
 if 'combatants' not in st.session_state:
     st.session_state.combatants = []
+
+# This loop ensures every tool has a "memory bank" ready to go
+memory_banks = ["bestiary_json", "artificer_json", "shop_json", "encounter_json", "tavern_json", "handout_json"]
+for bank in memory_banks:
+    if bank not in st.session_state:
+        st.session_state[bank] = None
 
 
 def get_ai_response(prompt, llm_provider, user_api_key):
@@ -658,6 +664,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
