@@ -332,6 +332,10 @@ elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (VTT JSON Integration)")
         st.markdown("Generate custom creatures formatted as structured JSON data for direct import into Foundry VTT or Roll20 APIs.")
         
+        # Initialize session state for the Bestiary if it doesn't exist
+        if "bestiary_json" not in st.session_state:
+            st.session_state.bestiary_json = None
+
         monster_type = st.selectbox("Creature Type", ["Aberration", "Beast", "Dragon", "Fiend", "Monstrosity", "Undead"])
         monster_cr = st.selectbox("Challenge Rating (CR)", ["1-4", "5-10", "11-16", "17-20", "21+"])
         custom_flavor = st.text_area("Monster Concept", placeholder="e.g., A mutated bear that breathes necrotic fire...")
@@ -365,28 +369,28 @@ elif page == "🐉 Monster Bestiary":
                 }
                 """
                 
-                # Fetch response from AI
                 raw_json = get_ai_response(prompt, llm_provider, user_api_key)
-                
-                # Clean the output in case the LLM tries to add markdown backticks
                 cleaned_json = raw_json.replace("```json", "").replace("```", "").strip()
                 
-                try:
-                    # Display as an interactive JSON tree in the UI
-                    import json
-                    parsed_json = json.loads(cleaned_json)
-                    st.json(parsed_json)
-                    
-                    # Provide the VTT-ready download button
-                    st.download_button(
-                        label="📥 Download JSON for VTT",
-                        data=cleaned_json,
-                        file_name="monster_statblock.json",
-                        mime="application/json"
-                    )
-                except Exception as e:
-                    st.error("Error parsing JSON data. The AI returned an invalid format. Please try forging again.")
-                    st.write("Raw output for debugging:", cleaned_json)
+                # Save the result to the browser's session memory
+                st.session_state.bestiary_json = cleaned_json
+
+        # If there is a monster in memory, display it (even if they clicked away and came back)
+        if st.session_state.bestiary_json:
+            try:
+                import json
+                parsed_json = json.loads(st.session_state.bestiary_json)
+                st.json(parsed_json)
+                
+                st.download_button(
+                    label="📥 Download JSON for VTT",
+                    data=st.session_state.bestiary_json,
+                    file_name="monster_statblock.json",
+                    mime="application/json"
+                )
+            except Exception as e:
+                st.error("Error parsing JSON data. Please try forging again.")
+                st.write("Raw output for debugging:", st.session_state.bestiary_json)
 elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
         prompt = st.text_area("Art Prompt:")
@@ -654,5 +658,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
