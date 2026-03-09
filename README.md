@@ -13,6 +13,7 @@ DM Co-Pilot is a high-performance Python application designed to bridge the gap 
 
 ## ✨ Latest Feature: VTT Export Engine
 The newest update introduces a **Direct-to-VTT (.txt) Export** for the **Scribe's Handouts** module. GMs can now generate immersive, in-universe lore and instantly download files formatted specifically for **Roll20** and **Foundry VTT** journals.
+* **VTT Data Pipeline:** Engineered a JSON serialization engine that parses raw LLM inference into structured, downloadable `.json` files for zero-latency import into Foundry and Roll20 APIs.
 
 ## 🛠️ Tech Stack
 * **Frontend:** Streamlit (Custom CSS/JS Injection for Gothic UI)
