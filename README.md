@@ -6,6 +6,17 @@
 ## 🚀 The Mission
 DM Co-Pilot is a high-performance Python application designed to bridge the gap between Large Language Models (LLMs) and tabletop storytelling. Built for Dungeons & Dragons GMs, it automates the "logistical heavy lifting" of session prep, allowing creators to focus on narrative and world-building.
 
+🚀 Performance & Architecture
+Scale: Successfully stress-tested with 450+ concurrent users and 1,100+ pipeline interactions in a single weekend.
+
+Inference Engine: Powered by the Groq LPU (Llama 3.1) to achieve sub-2-second generation latency, preventing server bottlenecks during high-traffic surges.
+
+State Management: Custom engineered "Global Session Memory" in Python/Streamlit to prevent data loss across 22 interconnected UI modules.
+
+Database: Integrated a real-time Google Cloud Firestore (NoSQL) vault to safely manage concurrent community JSON publish/read requests.
+
+
+
 ## 📈 Real-World Impact (March 2026)
 * **Traffic Milestone:** Achieved a peak of **450+ concurrent active users** during the v2.4 launch.
 * **Community Engagement:** 700+ interactions recorded in the first 24 hours of the "VTT Export" update.
