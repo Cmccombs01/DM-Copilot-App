@@ -9,7 +9,10 @@ import requests
 import PyPDF2
 from openai import OpenAI
 from collections import Counter
-
+# --- NEW: PRODUCTION SAFEGUARDS ---
+from tenacity import retry, stop_after_attempt, wait_exponential
+from pydantic import BaseModel, ValidationError
+from typing import List, Optional
 # --- NEW: FIRESTORE IMPORTS FOR THE VAULT ---
 from google.oauth2 import service_account
 from google.cloud import firestore
@@ -102,25 +105,47 @@ memory_banks = ["bestiary_json", "artificer_json", "shop_json", "encounter_json"
 for bank in memory_banks:
     if bank not in st.session_state:
         st.session_state[bank] = None
+# --- 🛡️ PYDANTIC DATA MODELS (THE BOUNCERS) ---
+class ActionModel(BaseModel):
+    name: str
+    description: str
 
+class MonsterStatblock(BaseModel):
+    name: str
+    size: str
+    type: str
+    alignment: str
+    armor_class: int
+    hit_points: int
+    speed: str
+    strength: int
+    dexterity: int
+    constitution: int
+    intelligence: int
+    wisdom: int
+    charisma: int
+    actions: List[ActionModel]
+    special_abilities: Optional[List[ActionModel]] = []
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=8))
 def get_ai_response(prompt, llm_provider, user_api_key):
-    try:
-        if llm_provider == "☁️ Groq (Cloud)":
-            api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
-            if not api_key:
-                return "⚠️ Please enter your Groq API Key in the sidebar."
-            from groq import Groq
-            client = Groq(api_key=api_key)
-            res = client.chat.completions.create(messages=[
-                                                 {"role": "user", "content": prompt}], model="llama-3.1-8b-instant").choices[0].message.content
-        else:
-            import ollama
-            res = ollama.chat(model="llama3.1", messages=[
-                              {"role": "user", "content": prompt}])['message']['content']
+    # Notice we removed the try/except block. 
+    # Tenacity NEEDS to see the error so it knows to retry!
+    if llm_provider == "☁️ Groq (Cloud)":
+        api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
+        if not api_key:
+            return "⚠️ Please enter your Groq API Key in the sidebar."
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        res = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}], 
+            model="llama-3.1-8b-instant"
+        ).choices[0].message.content
         return res
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
+    else:
+        import ollama
+        res = ollama.chat(model="llama3.1", messages=[{"role": "user", "content": prompt}])['message']['content']
+        return res
 
 
 # --- 🚀 MAIN APP & DATABASE INIT ---
@@ -665,5 +690,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
