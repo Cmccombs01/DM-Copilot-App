@@ -1,24 +1,29 @@
-# 🐉 DM Co-Pilot: Masterwork Edition
-**An AI-powered web application designed to automate D&D 5e session prep, featuring live telemetry, VTT integration, and a cloud-based community vault.**
+# 🐉 DM Co-Pilot | Masterwork Edition
+**An AI-Powered Orchestration Layer for Tabletop Game Masters**
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Google Cloud Firestore](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge.svg)](https://dm-copilot-app.streamlit.app/)
 
-## 🚀 The Project
-I built **DM Co-Pilot** to solve a real-world problem: Dungeon Master burnout. This tool bridges the gap between raw data and legendary storytelling, cutting session prep time by 80%. 
+## 🚀 The Mission
+DM Co-Pilot is a high-performance Python application designed to bridge the gap between Large Language Models (LLMs) and tabletop storytelling. Built for Dungeons & Dragons GMs, it automates the "logistical heavy lifting" of session prep, allowing creators to focus on narrative and world-building.
 
-Recently, the app experienced a viral traffic surge across multiple TTRPG communities, logging over 4.5 hours of continuous user engagement in a single afternoon. I live-patched the servers, deployed backend analytics, and shipped user-requested features mid-surge.
+## 📈 Real-World Impact (March 2026)
+* **Traffic Milestone:** Achieved a peak of **450+ concurrent active users** during the v2.4 launch.
+* **Community Engagement:** 700+ interactions recorded in the first 24 hours of the "VTT Export" update.
+* **Global Reach:** Active users across US, EU, and Canada tech hubs.
 
-## 🛠️ Key Features
-* **⚔️ Encounter Architect & VTT Export:** Generates perfectly balanced D&D 5e encounters using AI, and instantly exports them as `.json` files for seamless integration into Foundry VTT.
-* **📊 Live Product Analytics:** Integrated `streamlit-analytics2` to track granular widget interactions and pageviews, allowing for data-driven feature development.
-* **🏛️ Community Vault:** A live Google Cloud Firestore database where users can permanently publish and download generated monsters, encounters, and items.
-* **🧠 "Bring Your Own Key" (BYOK) Architecture:** Integrated Groq (Llama 3) for lightning-fast free generation, while allowing premium users to plug in their own OpenAI API keys for DALL-E 3 image generation.
+## ✨ Latest Feature: VTT Export Engine
+The newest update introduces a **Direct-to-VTT (.txt) Export** for the **Scribe's Handouts** module. GMs can now generate immersive, in-universe lore and instantly download files formatted specifically for **Roll20** and **Foundry VTT** journals.
 
-## 📈 The Data Science Case Study
-This repository is more than just an app; it is a live data engineering project. You can view the full Jupyter Notebook case study [Link to your notebook or portfolio here] detailing how I:
-1. Extracted NoSQL document data from Google Cloud Firestore using Python.
-2. Cleaned and parsed nested dictionary telemetry logs using `pandas`.
-3. Visualized user navigation trends with `matplotlib` to identify the most popular AI tools.
+## 🛠️ Tech Stack
+* **Frontend:** Streamlit (Custom CSS/JS Injection for Gothic UI)
+* **AI Orchestration:** Hybrid Engine supporting **Groq (Cloud LPU)** for speed and **Ollama (Local)** for privacy.
+* **Data Layer:** Google Firestore (Real-time Analytics & Community Vault)
+* **Processing:** Python (Pandas for SRD Bestiary Caching, PyPDF2 for Lore RAG)
+
+## 👨‍💻 About the Developer
+**Caleb McCombs**
+*Certified Data Analyst (Microsoft & Springboard)*
+Specializing in AI integration, real-time analytics, and user-centric software design. Seeking opportunities to build scalable AI solutions in international markets.
+
+---
+*Developed for the community, by a DM who loves the craft.*
