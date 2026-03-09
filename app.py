@@ -205,7 +205,7 @@ st.sidebar.markdown(
     """
     <div style="text-align: center;">
         <p style="color: #00FF00; font-family: 'MedievalSharp', cursive; margin-bottom: 10px; font-size: 1.1rem;">The Deep-Delver's Grimoire</p>
-        <a href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" style="text-decoration: none;">
+        <a href="https://discord.gg/NeG54aJrB3" target="_blank" style="text-decoration: none;">
             <div style="
                 background-color: #5865F2;
                 color: white;
@@ -665,4 +665,5 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
