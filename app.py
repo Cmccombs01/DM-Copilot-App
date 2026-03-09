@@ -219,10 +219,8 @@ if page == "📜 DM's Guide":
         # --- LIVE TELEMETRY DASHBOARD ---
         st.markdown("### 📡 System Telemetry")
         c1, c2, c3 = st.columns(3)
-        c1.metric(label="Active DMs (Global)",
-                  value="450+", delta="Viral Surge")
-
-        # Dynamically pull the total number of Vault items
+        c1.metric(label="Active DMs (Global)", value="450+", delta="Viral Surge")
+        
         vault_count = "Offline"
         if db is not None:
             try:
@@ -230,77 +228,31 @@ if page == "📜 DM's Guide":
                 vault_count = sum(1 for _ in docs)
             except Exception:
                 vault_count = "Error"
-        c2.metric(label="Vault Creations",
-                  value=vault_count, delta="Live Database")
-        c3.metric(label="Server Status", value="Online",
-                  delta="By Groq & Ollama")
+        c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
+        c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
+        
         st.divider()
-
-        # --- THE WELCOME HOOK ---
-        st.markdown(f"""
+        st.markdown("""
         <div class='stat-card'>
-        ### 🐉 You focus on the story. Let the AI handle the rest.
-        **Developer:** Caleb McCombs | Microsoft & Springboard Certified Analyst <br>
-        Welcome to the Masterwork Edition. I built this tool to bridge the gap between raw data and legendary storytelling, cutting your session prep time by 80%.
+        ### 🐉 Masterwork Edition: Pro Tips
+        * **VTT Integration:** Use the **Download JSON** button in the Bestiary or Artificer to export stats directly to Foundry VTT or Roll20.
+        * **Session Persistence:** You can now switch tabs without losing your work! The app remembers your last generated item or monster.
+        * **The Vault:** Don't just generate—Publish! Share your best creations with the global DM community in the **Community Vault**.
         </div>
         """, unsafe_allow_html=True)
 
-        # --- 🏆 NEW: HALL OF FAME (TOP CONTRIBUTORS) ---
-        st.markdown("### 👑 Hall of Fame: Top Contributors")
-        if db is not None:
-            try:
-                docs = db.collection("community_vault").stream()
-                creator_counts = Counter()
-                # Tally up the creators, ignoring anonymous ones
-                for doc in docs:
-                    data = doc.to_dict()
-                    creator = data.get("creator", "Anonymous DM").strip()
-                    if creator.lower() != "anonymous dm" and creator != "":
-                        creator_counts[creator] += 1
-
-                top_creators = creator_counts.most_common(3)
-                if top_creators:
-                    cols = st.columns(3)
-                    for i, (creator, count) in enumerate(top_creators):
-                        # Add a gold, silver, bronze medal logic
-                        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                        cols[i].info(
-                            f"{medal} **{creator}**\n\n📜 {count} Creations")
-                else:
-                    st.info(
-                        "The leaderboard is waiting for its first legends. Publish an item to claim the #1 spot!")
-            except Exception as e:
-                st.error("Could not load Hall of Fame.")
-        st.divider()
-
-        # --- COMMUNITY SPOTLIGHT ---
-        st.markdown("### 🛡️ The Community Vanguard")
-        st.markdown("You aren't prepping in a vacuum. Join hundreds of DMs sharing their most devious creations. Every monster you forge, every curse you weave, and every encounter you publish helps the entire community level up.")
-        if db is not None:
-            try:
-                latest_item = db.collection("community_vault").order_by(
-                    "timestamp", direction=firestore.Query.DESCENDING).limit(1).stream()
-                for doc in latest_item:
-                    data = doc.to_dict()
-                    st.success(
-                        f"🔥 **Latest Vault Addition:** *{data.get('title', 'Untitled')}* (A {data.get('type', 'Creation')} by {data.get('creator', 'a fellow DM')}) - Check the Vault tab to download it!")
-            except Exception:
-                pass
-        st.divider()
-
-        # --- QUICK START INSTRUCTIONS ---
-        st.markdown("### 🗺️ Where to start:")
+        st.markdown("### 🗺️ Quick Start")
         st.markdown("""
-        * **🏛️ Community Vault:** Browse encounters, loot, and monsters created by other veteran DMs, or publish your own!
-        * **⚔️ Encounter Architect:** Need a boss fight right now? Generate perfectly balanced monsters with one click.
-        * **🛡️ Initiative Tracker:** Throw out your scratchpad. Track HP, rolls, and turn order right here in the browser.
+        * **🐉 Bestiary:** Generate VTT-ready monsters with structured JSON stat-blocks.
+        * **💎 Artificer:** Forge magic items that persist across your entire session.
+        * **🛡️ Tracker:** Run combat effortlessly with our built-in Initiative & HP tracker.
         """)
 
-elif page == "🆕 Patch Notes":
+    elif page == "🆕 Patch Notes":
         st.title("🆕 Patch Notes")
-        st.success("✅ **v2.4 Update:** Lightning-fast local Bestiary caching & improved search logic!")
-        st.success("✅ **v2.3 Update:** Added AI Session Chronicler for player recaps!")
-        st.success("✅ **v2.2 Update:** Monster Bestiary now includes text stat block exports.")
+        st.success("✅ **v2.5 Update:** Masterwork Persistence! Added Global Session Memory to the Bestiary and Artificer.")
+        st.success("✅ **v2.4 Update:** VTT Data Pipeline integrated for structured JSON exports.")
+        st.success("✅ **v2.3 Update:** AI Session Chronicler added for player recaps.")
 
 elif page == "📜 Session Recap":
         st.title("📜 AI Session Chronicler")
@@ -684,6 +636,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
