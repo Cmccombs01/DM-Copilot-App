@@ -550,7 +550,10 @@ elif page == "📜 Scribe's Handouts":
         topic = st.text_area("What is the letter, journal, or bounty about?")
         if st.button("Write Handout"):
             with st.spinner("Scribing..."):
-                st.markdown(f"<div class='stat-card'>{get_ai_response(f'Write an immersive, in-universe D&D handout about: {topic}', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
+                # Updated for VTT Export functionality
+                handout_text = get_ai_response(f"Write an immersive, in-universe D&D handout about: {topic}", llm_provider, user_api_key)
+                st.markdown(f"<div class='stat-card'>{handout_text}</div>", unsafe_allow_html=True)
+                st.download_button("📥 Download Handout for VTT", handout_text, file_name="handout.txt")
 
 elif page == "🗑️ Pocket Trash Loot":
         st.title("🗑️ Pocket Trash Loot")
@@ -627,16 +630,3 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
-
-
-
-
-
-
-
-
-
-
-
-
