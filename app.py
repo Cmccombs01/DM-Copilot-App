@@ -329,47 +329,64 @@ elif page == "🛡️ Initiative Tracker":
 
     # --- 🐛 THE GOBLIN BUG FIX & ⚡ THE SPEED FIX ---
 elif page == "🐉 Monster Bestiary":
-        st.title("🐉 Monster Bestiary (SRD Database)")
-        search_query = st.text_input("Search monster...").strip().lower()
+        st.title("🐉 Monster Bestiary (VTT JSON Integration)")
+        st.markdown("Generate custom creatures formatted as structured JSON data for direct import into Foundry VTT or Roll20 APIs.")
         
-        if search_query:
-            if monster_df.empty:
-                 st.warning("⚠️ Database is empty. Check the API Crash Report at the top of the page.")
-            else:
-                filtered_df = monster_df[monster_df['name'].str.lower().str.contains(search_query, na=False)]
+        monster_type = st.selectbox("Creature Type", ["Aberration", "Beast", "Dragon", "Fiend", "Monstrosity", "Undead"])
+        monster_cr = st.selectbox("Challenge Rating (CR)", ["1-4", "5-10", "11-16", "17-20", "21+"])
+        custom_flavor = st.text_area("Monster Concept", placeholder="e.g., A mutated bear that breathes necrotic fire...")
+        
+        if st.button("Forge JSON Statblock 🔨"):
+            with st.spinner("Compiling structured data..."):
+                prompt = f"Create a D&D 5e {monster_type} with a CR of {monster_cr}. Concept: {custom_flavor}. "
+                prompt += """
+                You MUST return the response as a valid JSON object ONLY. Do not include markdown formatting, backticks, or conversational text.
+                Structure the JSON with these exact keys:
+                {
+                  "name": "Monster Name",
+                  "size": "Large",
+                  "type": "monstrosity",
+                  "alignment": "neutral evil",
+                  "armor_class": 15,
+                  "hit_points": 100,
+                  "speed": "30 ft.",
+                  "strength": 18,
+                  "dexterity": 12,
+                  "constitution": 16,
+                  "intelligence": 6,
+                  "wisdom": 10,
+                  "charisma": 8,
+                  "actions": [
+                    {"name": "Necrotic Bite", "description": "Melee Weapon Attack..."}
+                  ],
+                  "special_abilities": [
+                    {"name": "Frightful Presence", "description": "Each creature of the monster's choice..."}
+                  ]
+                }
+                """
                 
-                if filtered_df.empty:
-                    st.warning(f"No monsters found matching '{search_query}'.")
-                else:
-                    for index, row in filtered_df.head(3).iterrows():
-                        name_val = row.get('name', 'Unknown')
-                        cr_val = row.get('cr', 'N/A')
-                        hp_val = row.get('hp', 'N/A')
-                        ac_val = row.get('ac', 'N/A')
-                        actions_val = row.get('actions', 'No actions listed.')
-
-                        st.markdown(f"### {name_val} (CR: {cr_val})")
-                        c1, c2 = st.columns(2)
-                        
-                        with c1:
-                            if st.button(f"➕ Add to Initiative", key=f"add_{index}_{name_val}"):
-                                # Clean the HP string to just grab the integer if it says "15 (2d8)"
-                                try:
-                                    hp_int = int(str(hp_val).split(' ')[0])
-                                except:
-                                    hp_int = 15
-                                st.session_state.combatants.append({"name": name_val, "init": random.randint(1,20), "hp": hp_int})
-                                st.success(f"{name_val} added!")
-                        with c2:
-                            data = f"{name_val}\nHP: {hp_val} | AC: {ac_val}\n\nTraits / Actions:\n{actions_val}"
-                            st.download_button("📥 Download Stats", data, file_name=f"{str(name_val).lower().replace(' ', '_')}.txt", key=f"dl_{index}")
-                        
-                        with st.expander("View Full Stat Block", expanded=True):
-                            st.markdown(f"**Armor Class:** {ac_val} | **Hit Points:** {hp_val}")
-                            st.markdown("---")
-                            st.markdown(f"**Traits / Actions:**\n{actions_val}")
-                        st.markdown("---")
-
+                # Fetch response from AI
+                raw_json = get_ai_response(prompt, llm_provider, user_api_key)
+                
+                # Clean the output in case the LLM tries to add markdown backticks
+                cleaned_json = raw_json.replace("```json", "").replace("```", "").strip()
+                
+                try:
+                    # Display as an interactive JSON tree in the UI
+                    import json
+                    parsed_json = json.loads(cleaned_json)
+                    st.json(parsed_json)
+                    
+                    # Provide the VTT-ready download button
+                    st.download_button(
+                        label="📥 Download JSON for VTT",
+                        data=cleaned_json,
+                        file_name="monster_statblock.json",
+                        mime="application/json"
+                    )
+                except Exception as e:
+                    st.error("Error parsing JSON data. The AI returned an invalid format. Please try forging again.")
+                    st.write("Raw output for debugging:", cleaned_json)
 elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
         prompt = st.text_area("Art Prompt:")
@@ -637,4 +654,5 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
