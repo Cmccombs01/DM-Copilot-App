@@ -389,10 +389,16 @@ elif page == "🐉 Monster Bestiary":
 
         # If there is a monster in memory, display it (even if they clicked away and came back)
         if st.session_state.bestiary_json:
-            try:
+           try:
                 import json
                 parsed_json = json.loads(st.session_state.bestiary_json)
-                st.json(parsed_json)
+                
+                # --- 🛡️ THE BOUNCER IS ACTIVE ---
+                # This forces the JSON to match our exact VTT schema
+                validated_monster = MonsterStatblock(**parsed_json)
+                
+                # If it passes, we display the perfectly clean, validated data
+                st.json(validated_monster.model_dump())
                 
                 st.download_button(
                     label="📥 Download JSON for VTT",
@@ -690,6 +696,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
