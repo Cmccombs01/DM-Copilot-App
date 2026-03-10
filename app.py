@@ -387,9 +387,9 @@ elif page == "🐉 Monster Bestiary":
                 # Save the result to the browser's session memory
                 st.session_state.bestiary_json = cleaned_json
 
-        # If there is a monster in memory, display it (even if they clicked away and came back)
+       # If there is a monster in memory, display it (even if they clicked away and came back)
         if st.session_state.bestiary_json:
-           try:
+            try:
                 import json
                 parsed_json = json.loads(st.session_state.bestiary_json)
                 
@@ -401,9 +401,9 @@ elif page == "🐉 Monster Bestiary":
                 st.json(validated_monster.model_dump())
                 
                 st.download_button(
-                    label="📥 Download JSON for VTT",
-                    data=st.session_state.bestiary_json,
-                    file_name="monster_statblock.json",
+                    label="📥 Download JSON for VTT", 
+                    data=st.session_state.bestiary_json, 
+                    file_name="monster_statblock.json", 
                     mime="application/json"
                 )
             except Exception as e:
@@ -696,7 +696,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
 
 
 
