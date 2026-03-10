@@ -270,21 +270,23 @@ if d_col2.button("Roll!"):
             f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
 
 if page == "📜 DM's Guide":
-        st.title("📜 Welcome to the DM Co-Pilot")
-        # --- LIVE TELEMETRY DASHBOARD ---
-        st.markdown("### 📡 System Telemetry")
-        c1, c2, c3 = st.columns(3)
-       c1.metric(label="Global Interactions", value="1,100+", delta="Viral Surge")
-        
-        vault_count = "Offline"
-        if db is not None:
-            try:
-                docs = db.collection("community_vault").stream()
-                vault_count = sum(1 for _ in docs)
-            except Exception:
-                vault_count = "Error"
-        c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
-        c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
+    st.title("📜 Welcome to the DM Co-Pilot")
+
+    # --- LIVE TELEMETRY DASHBOARD ---
+    st.markdown("### 📡 System Telemetry")
+    c1, c2, c3 = st.columns(3)
+    c1.metric(label="Global Interactions", value="1,100+", delta="Viral Surge")
+
+    vault_count = "Offline"
+    if db is not None:
+        try:
+            docs = db.collection("community_vault").stream()
+            vault_count = sum(1 for _ in docs)
+        except Exception:
+            vault_count = "Error"
+            
+    c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
+    c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
         
         st.divider()
       st.markdown("""
@@ -739,6 +741,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
