@@ -274,7 +274,7 @@ if page == "📜 DM's Guide":
         # --- LIVE TELEMETRY DASHBOARD ---
         st.markdown("### 📡 System Telemetry")
         c1, c2, c3 = st.columns(3)
-        c1.metric(label="Active DMs (Global)", value="450+", delta="Viral Surge")
+       c1.metric(label="Global Interactions", value="1,100+", delta="Viral Surge")
         
         vault_count = "Offline"
         if db is not None:
@@ -287,9 +287,11 @@ if page == "📜 DM's Guide":
         c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
         
         st.divider()
-        st.markdown("""
+      st.markdown("""
         <div class='stat-card'>
         ### 🐉 Masterwork Edition: Pro Tips
+        * **🎙️ Voice Brainstorming [NEW]:** Jump into the new **Audio Scribe** tab to speak your chaotic campaign ideas out loud and let the AI instantly organize them.
+        * **🛡️ Enterprise Stability [NEW]:** VTT exports are now protected by Pydantic JSON Bouncers. Say goodbye to broken stat blocks!
         * **VTT Integration:** Use the **Download JSON** button in the Bestiary or Artificer to export stats directly to Foundry VTT or Roll20.
         * **Session Persistence:** You can now switch tabs without losing your work! The app remembers your last generated item or monster.
         * **The Vault:** Don't just generate—Publish! Share your best creations with the global DM community in the **Community Vault**.
@@ -737,6 +739,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
