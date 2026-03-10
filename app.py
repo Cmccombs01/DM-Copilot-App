@@ -205,6 +205,7 @@ page = st.sidebar.radio("Navigation", [
         "🐉 Monster Bestiary",
         "🎨 Image Generator",
         "📚 PDF-Lore Chat",
+        "🎙️ Audio Scribe",  # <--- NEW TAB ADDED HERE
         "⚔️ Encounter Architect",
         "🎭 NPC Quick Forge",
         "⚙️ Trap Architect",
@@ -303,10 +304,12 @@ if page == "📜 DM's Guide":
         """)
         
 elif page == "🆕 Patch Notes":
-        st.title("🆕 Patch Notes")
-        st.success("✅ **v2.5 Update:** Masterwork Persistence! Added Global Session Memory to the Bestiary and Artificer.")
-        st.success("✅ **v2.4 Update:** VTT Data Pipeline integrated for structured JSON exports.")
-        st.success("✅ **v2.3 Update:** AI Session Chronicler added for player recaps.")
+    st.title("🆕 Patch Notes")
+    st.success("🎙️ **v2.7 Update:** The Audio Scribe! Brainstorm out loud with our new Groq Whisper AI voice-to-text integration.")
+    st.success("🛡️ **v2.6 Update:** Enterprise Architecture! Added Pydantic JSON Bouncers and Tenacity auto-retries for 100% stable VTT exports.")
+    st.success("✅ **v2.5 Update:** Masterwork Persistence! Added Global Session Memory to the Bestiary and Artificer.")
+    st.success("✅ **v2.4 Update:** VTT Data Pipeline integrated for structured JSON exports.")
+    st.success("✅ **v2.3 Update:** AI Session Chronicler added for player recaps.")
 
 elif page == "📜 Session Recap":
         st.title("📜 AI Session Chronicler")
@@ -657,6 +660,44 @@ elif page == "🤝 DM Matchmaker":
         if st.button("Post to Matchmaker Board"):
             st.success("Board updated! (Simulated for now until we connect the live Matchmaker DB)")
             st.balloons()
+# --- 🎙️ NEW: AUDIO SCRIBE (WHISPER AI) ---
+elif page == "🎙️ Audio Scribe":
+    st.title("🎙️ Audio Scribe (Whisper AI)")
+    st.markdown("Brainstorming out loud? Speak your campaign ideas, and let the Groq Whisper model instantly transcribe and structure them.")
+
+    audio_file = st.audio_input("Record your voice notes here:")
+
+    if audio_file is not None:
+        with st.spinner("Transcribing with Whisper-Large-v3..."):
+            try:
+                from groq import Groq
+                # Grab the API key securely
+                api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
+                if not api_key:
+                    st.error("⚠️ Please enter your Groq API Key in the sidebar.")
+                else:
+                    client = Groq(api_key=api_key)
+                    # Send audio to Groq's lightning-fast Whisper model
+                    transcription = client.audio.transcriptions.create(
+                        file=("audio.wav", audio_file.read()),
+                        model="whisper-large-v3",
+                    )
+
+                    st.success("Transcription complete!")
+                    st.info("Here is what you said:")
+                    st.write(transcription.text)
+
+                    # Bonus: Pass the transcription to the LLM to format it!
+                    st.markdown("### 🪄 Magic Formatting")
+                    if st.button("Turn into Campaign Notes"):
+                        with st.spinner("Structuring notes..."):
+                            prompt = f"Take this raw voice transcription and format it into clean, organized D&D campaign notes with bullet points:\n\n{transcription.text}"
+                            formatted_notes = get_ai_response(prompt, llm_provider, user_api_key)
+                            st.markdown(f"<div class='stat-card'>{formatted_notes}</div>", unsafe_allow_html=True)
+
+            except Exception as e:
+                st.error(f"Transcription failed: {e}")
+
 
 elif page == "⭐ Give Feedback":
         st.title("⭐ Give Feedback")
@@ -696,6 +737,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
+
 
 
 
