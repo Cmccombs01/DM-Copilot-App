@@ -288,8 +288,8 @@ if page == "📜 DM's Guide":
     c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
     c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
         
-        st.divider()
-      st.markdown("""
+    st.divider()
+    st.markdown("""
         <div class='stat-card'>
         ### 🐉 Masterwork Edition: Pro Tips
         * **🎙️ Voice Brainstorming [NEW]:** Jump into the new **Audio Scribe** tab to speak your chaotic campaign ideas out loud and let the AI instantly organize them.
@@ -300,8 +300,8 @@ if page == "📜 DM's Guide":
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("### 🗺️ Quick Start")
-        st.markdown("""
+    st.markdown("### 🗺️ Quick Start")
+    st.markdown("""
         * **🐉 Bestiary:** Generate VTT-ready monsters with structured JSON stat-blocks.
         * **💎 Artificer:** Forge magic items that persist across your entire session.
         * **🛡️ Tracker:** Run combat effortlessly with our built-in Initiative & HP tracker.
@@ -741,7 +741,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                 st.sidebar.warning("Dashboard error during surge.")
         elif password:
             st.sidebar.error("Access Denied")
-
 
 
 
