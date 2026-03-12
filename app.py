@@ -284,54 +284,70 @@ with analytics_context:
             st.markdown("Paste a public D&D Beyond character URL to automatically scrape their core stats into your sheet.")
             ddb_url = st.text_input("D&D Beyond URL", placeholder="e.g., https://www.dndbeyond.com/characters/12345678")
             
-            if st.button("Scrape Character Sheet 🚀"):
-                if ddb_url:
-                    with st.spinner("Breaching the D&D Beyond API..."):
-                        try:
-                            match = re.search(r"characters/(\d+)", ddb_url)
-                            if match:
-                                char_id = match.group(1)
-                                api_url = f"https://character-service.dndbeyond.com/character/v5/character/{char_id}"
-                                
-                     # --- THE ULTIMATE FIX: Browser Session Spoofing ---
-                                session = requests.Session()
-                                headers = {
-                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                                    "Accept": "application/json",
-                                    "Referer": "https://www.dndbeyond.com/"
-                                }
-                                response = session.get(api_url, headers=headers, timeout=10)
-                                if response.status_code == 200:
-                                    data = response.json()
-                                    if "data" in data:
-                                        char_data = data["data"]
-                                        
-                                        name = char_data.get("name", "Unknown Hero")
-                                        base_hp = char_data.get("baseHitPoints", 10)
-                                        bonus_hp = char_data.get("bonusHitPoints", 0)
-                                        max_hp = base_hp + bonus_hp
-                                        
-                                        classes = [c["definition"]["name"] for c in char_data.get("classes", [])]
-                                        class_str = "/".join(classes) if classes else "Unknown Class"
-                                        
-                                        new_char = {"Name": name, "Class": class_str, "AC": 15, "Passive Perception": 10, "Spell Save DC": 13, "Max HP": max_hp}
-                                        new_row_df = pd.DataFrame([new_char])
-                                        st.session_state.party_stats = pd.concat([st.session_state.party_stats, new_row_df], ignore_index=True)
-                                        
-                                        st.success(f"⚡ Successfully scraped and imported {name} ({class_str})!")
-                                        st.rerun()
-                                    else:
-                                        st.error("Character data not found. Ensure the character is set to 'Public' on D&D Beyond.")
-                                else:
-                                    st.error(f"Failed to connect to D&D Beyond API. Status: {response.status_code}")
-                            else:
-                                st.error("Invalid URL format. Make sure it contains 'characters/12345678'.")
-                        except Exception as e:
-                            st.error(f"Data Pipeline Error: {e}")
-                else:
-                    st.warning("⚠️ Please paste a URL first.")
+           elif page == "📋 Player Cheat Sheet":
+    st.title("📋 Player Cheat Sheet")
+    st.markdown("A zero-lag tracker for your party's core stats. Edit directly in the table below—you can even add or delete rows! Changes save automatically to your session.")
+    
+    with st.expander("🔗 Import from D&D Beyond"):
+        st.markdown("Paste a **Public URL** OR the **Raw JSON** from the D&D Beyond API.")
+        
+        # Dual-Input Layout
+        ddb_url = st.text_input("D&D Beyond URL", placeholder="https://www.dndbeyond.com/characters/...")
+        manual_json = st.text_area("OR Paste Raw JSON (Backdoor Fix)", help="If the URL scrape fails, paste the character JSON here.")
 
-        st.divider()
+        if st.button("Process Character 🚀"):
+            char_data = None
+            
+            # 1. Try Manual JSON First (The "No-Fail" method)
+            if manual_json:
+                try:
+                    import json
+                    char_data = json.loads(manual_json).get("data")
+                    st.success("✅ Manual JSON Injection Successful!")
+                except:
+                    st.error("Invalid JSON format. Make sure you copied the whole page.")
+
+            # 2. Try Automated Scraper (The "Magic" method)
+            elif ddb_url:
+                with st.spinner("Bypassing D&D Beyond Firewalls..."):
+                    try:
+                        match = re.search(r"characters/(\d+)", ddb_url)
+                        if match:
+                            char_id = match.group(1)
+                            api_url = f"https://character-service.dndbeyond.com/character/v5/character/{char_id}"
+                            
+                            session = requests.Session()
+                            headers = {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                                "Accept": "application/json",
+                                "Referer": "https://www.dndbeyond.com/"
+                            }
+                            response = session.get(api_url, headers=headers, timeout=10)
+                            
+                            if response.status_code == 200:
+                                char_data = response.json().get("data")
+                            else:
+                                st.error(f"D&D Beyond blocked the request (Status: {response.status_code}). Please use the 'Raw JSON' box below.")
+                    except Exception as e:
+                        st.error(f"Connection Error: {e}")
+
+            # 3. Process the Data into the Table
+            if char_data:
+                name = char_data.get("name", "Unknown Hero")
+                base_hp = char_data.get("baseHitPoints", 10)
+                bonus_hp = char_data.get("bonusHitPoints", 0)
+                max_hp = base_hp + bonus_hp
+                classes = [c["definition"]["name"] for c in char_data.get("classes", [])]
+                class_str = "/".join(classes) if classes else "Unknown Class"
+                
+                new_char = {"Name": name, "Class": class_str, "AC": 15, "Passive Perception": 10, "Spell Save DC": 13, "Max HP": max_hp}
+                new_row_df = pd.DataFrame([new_char])
+                st.session_state.party_stats = pd.concat([st.session_state.party_stats, new_row_df], ignore_index=True)
+                
+                st.success(f"⚡ {name} ({class_str}) has joined the party!")
+                st.rerun()
+
+    st.divider()
 
         st.session_state.party_stats = st.data_editor(
             st.session_state.party_stats, 
@@ -1348,4 +1364,5 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
             
     elif password:
         st.sidebar.error("Access Denied")
+
 
