@@ -293,7 +293,14 @@ with analytics_context:
                                 char_id = match.group(1)
                                 api_url = f"https://character-service.dndbeyond.com/character/v5/character/{char_id}"
                                 
-                                response = requests.get(api_url, timeout=10)
+                     # --- THE ULTIMATE FIX: Browser Session Spoofing ---
+                                session = requests.Session()
+                                headers = {
+                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                                    "Accept": "application/json",
+                                    "Referer": "https://www.dndbeyond.com/"
+                                }
+                                response = session.get(api_url, headers=headers, timeout=10)
                                 if response.status_code == 200:
                                     data = response.json()
                                     if "data" in data:
@@ -1341,3 +1348,4 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
             
     elif password:
         st.sidebar.error("Access Denied")
+
