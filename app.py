@@ -9,86 +9,84 @@ import requests
 import PyPDF2
 from openai import OpenAI
 from collections import Counter
+import re
+
 # --- NEW: PRODUCTION SAFEGUARDS ---
 from tenacity import retry, stop_after_attempt, wait_exponential
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional
+
 # --- NEW: FIRESTORE IMPORTS FOR THE VAULT ---
 from google.oauth2 import service_account
 from google.cloud import firestore
+
+st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition", page_icon="🐉", layout="wide")
 
 # --- 🚑 TRAFFIC SURGE PATCH FOR ANALYTICS ---
 import streamlit_analytics2.display as sa2_display
 if not hasattr(sa2_display, "original_show_results"):
     sa2_display.original_show_results = sa2_display.show_results
 
-
-def safe_show_results(data, reset_data, unsafe_password):
-    safe_data = data.copy()
-    safe_data["widgets"] = data.get("widgets", {}).copy()
-    return sa2_display.original_show_results(safe_data, reset_data, unsafe_password)
-
+def safe_show_results(counts, reset_callback):
+    safe_counts = counts.copy() if isinstance(counts, dict) else counts
+    if isinstance(safe_counts, dict) and "widgets" in safe_counts and isinstance(safe_counts["widgets"], dict):
+        safe_counts["widgets"] = safe_counts["widgets"].copy()
+    return sa2_display.original_show_results(safe_counts, reset_callback)
 
 sa2_display.show_results = safe_show_results
 
-st.set_page_config(page_title="DM Co-Pilot | Masterwork Edition",
-                   page_icon="🐉", layout="wide")
+# --- MAGIC CLOUD UNLOCKER (BULLETPROOF VERSION) ---
+firestore_secret = None
+if "firestore" in st.secrets:
+    firestore_secret = st.secrets["firestore"]
+elif "GOOGLE_CREDENTIALS" in st.secrets:
+    firestore_secret = st.secrets["GOOGLE_CREDENTIALS"]
+
+if firestore_secret:
+    try:
+        if isinstance(firestore_secret, str):
+            firestore_key = json.loads(firestore_secret)
+        else:
+            firestore_key = dict(firestore_secret)
+            
+        with open("temp_firestore_key.json", "w") as f:
+            json.dump(firestore_key, f)
+    except Exception as e:
+        print(f"Error parsing Google Secrets: {e}")
 
 # --- ⚡ THE SPEED FIX: Caching the Bestiary in RAM ---
-
-
 @st.cache_data
 def load_bestiary():
     try:
         import pandas as pd
         import json
-
-        # 1. BULLETPROOF LOCAL FETCH: Use Python's native JSON reader (ignores blank spaces!)
         with open("srd_5e_monsters.json", "r", encoding="utf-8") as f:
             raw_data = json.load(f)
 
         df = pd.DataFrame(raw_data)
+        rename_map = {"Challenge": "cr", "Hit Points": "hp", "Armor Class": "ac"}
+        df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
-        # 2. Rename the JSON columns to match our exact variables
-        rename_map = {"Challenge": "cr",
-            "Hit Points": "hp", "Armor Class": "ac"}
-        df = df.rename(
-            columns={k: v for k, v in rename_map.items() if k in df.columns})
-
-        # 3. Combine Traits and Actions, and strip HTML tags
         traits = df['Traits'].fillna('') if 'Traits' in df.columns else ''
         acts = df['Actions'].fillna('') if 'Actions' in df.columns else ''
         df['actions'] = traits + '\n\n' + acts
         df['actions'] = df['actions'].str.replace(r'<[^<>]*>', '', regex=True)
-
         return df
     except Exception as e:
         st.error(f"🚨 LOCAL DATABASE CRASH REPORT: {e}")
         import pandas as pd
         return pd.DataFrame()
 
-
 monster_df = load_bestiary()
+
 # --- 🌌 THEME & STYLING ---
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
-[data-testid="stAppViewContainer"] {
-    background-color: #000000 !important;
-}
-[data-testid="stAppViewContainer"] p, label, li {
-    color: #00FF00 !important;
-    font-family: monospace !important;
-}
-h1, h2, h3 {
-    font-family: 'MedievalSharp', cursive;
-    color: #00FF00 !important;
-    text-shadow: 0 0 10px #00FF00;
-}
-[data-testid="stSidebar"] {
-    background-color: #000000 !important;
-    border-right: 2px solid #00FF00 !important;
-}
+[data-testid="stAppViewContainer"] { background-color: #000000 !important; }
+[data-testid="stAppViewContainer"] p, label, li { color: #00FF00 !important; font-family: monospace !important; }
+h1, h2, h3 { font-family: 'MedievalSharp', cursive; color: #00FF00 !important; text-shadow: 0 0 10px #00FF00; }
+[data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00FF00 !important; }
 .stat-card {background-color: #0a0a0a !important; border: 1px solid #00FF00 !important; padding: 15px; border-radius: 8px; border-left: 10px solid #00FF00 !important; color: #00FF00 !important; margin-bottom: 10px; }
 .stButton>button {background-color: #000000 !important; color: #00FF00 !important; border: 2px solid #00FF00 !important; width: 100%; transition: 0.3s; }
 .stButton>button:hover { background-color: #00FF00 !important; color: #000000 !important; }
@@ -99,12 +97,23 @@ h1, h2, h3 {
 # --- ⚙️ HELPER LOGIC & GLOBAL MEMORY ---
 if 'combatants' not in st.session_state:
     st.session_state.combatants = []
+if 'party_stats' not in st.session_state:
+    st.session_state.party_stats = pd.DataFrame([
+        {"Name": "Player 1", "Class": "Fighter", "AC": 18, "Passive Perception": 13, "Spell Save DC": 0, "Max HP": 45},
+        {"Name": "Player 2", "Class": "Wizard", "AC": 12, "Passive Perception": 11, "Spell Save DC": 15, "Max HP": 22}
+    ])
 
-# This loop ensures every tool has a "memory bank" ready to go
 memory_banks = ["bestiary_json", "artificer_json", "shop_json", "encounter_json", "tavern_json", "handout_json"]
 for bank in memory_banks:
     if bank not in st.session_state:
         st.session_state[bank] = None
+if "villain_json" not in st.session_state:
+    st.session_state.villain_json = None
+if "converter_output" not in st.session_state:
+    st.session_state.converter_output = None
+if "forged_monster" not in st.session_state:
+    st.session_state.forged_monster = None
+
 # --- 🛡️ PYDANTIC DATA MODELS (THE BOUNCERS) ---
 class ActionModel(BaseModel):
     name: str
@@ -129,8 +138,6 @@ class MonsterStatblock(BaseModel):
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=8))
 def get_ai_response(prompt, llm_provider, user_api_key):
-    # Notice we removed the try/except block. 
-    # Tenacity NEEDS to see the error so it knows to retry!
     if llm_provider == "☁️ Groq (Cloud)":
         api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
         if not api_key:
@@ -147,214 +154,287 @@ def get_ai_response(prompt, llm_provider, user_api_key):
         res = ollama.chat(model="llama3.1", messages=[{"role": "user", "content": prompt}])['message']['content']
         return res
 
-
 # --- 🚀 MAIN APP & DATABASE INIT ---
 try:
-    import json
-    raw_secret = st.secrets["GOOGLE_CREDENTIALS"]
-
-    # 1. BULLETPROOF AUTH: Handle it whether Streamlit gives us a string OR a dictionary
-    if isinstance(raw_secret, str):
-        firestore_key = json.loads(raw_secret)
+    if os.path.exists("temp_firestore_key.json") and os.path.getsize("temp_firestore_key.json") > 0:
+        with open("temp_firestore_key.json", "r") as f:
+            key_data = json.load(f)
+            
+        creds = service_account.Credentials.from_service_account_file("temp_firestore_key.json")
+        db = firestore.Client(credentials=creds, project=key_data.get("project_id", "dm-copilot-analytics"))
+        
+        analytics_context = streamlit_analytics.track(
+            firestore_key_file="temp_firestore_key.json", 
+            firestore_collection_name="dm_copilot_traffic"
+        )
     else:
-        firestore_key = dict(raw_secret)
-
-   # 2. BULLETPROOF FILE CREATION: Prevent multi-user race conditions
-    import os
-    if not os.path.exists("temp_firestore_key.json") or os.path.getsize("temp_firestore_key.json") == 0:
-        with open("temp_firestore_key.json", "w") as f:
-            json.dump(firestore_key, f)
-
-    # 3. Start the Analytics using the physical file path
-    analytics_context = streamlit_analytics.track(
-        firestore_key_file="temp_firestore_key.json", firestore_collection_name="dm_copilot_traffic")
-
-    # 4. Create custom Database Connection for the Vault
-    creds = service_account.Credentials.from_service_account_info(
-        firestore_key)
-    db = firestore.Client(credentials=creds, project=firestore_key.get(
-        "project_id", "dm-copilot-analytics"))
+        raise Exception("Google Credentials file missing or empty.")
 except Exception as e:
-    st.error(f"Database connection failed: {e}")
-    # BULLETPROOF FALLBACK: If analytics fails, bypass it entirely so the app survives
     import contextlib
     analytics_context = contextlib.nullcontext()
     db = None
 
 with analytics_context:
-    st.sidebar.markdown(
-        "<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
-    llm_provider = st.sidebar.radio(
-        "Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
-    user_api_key = st.sidebar.text_input(
-        "Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
+    st.sidebar.markdown("<h2 style='text-align: center;'>🐉 DM CO-PILOT</h2>", unsafe_allow_html=True)
+    llm_provider = st.sidebar.radio("Engine", ["☁️ Groq (Cloud)", "💻 Ollama (Local)"])
+    user_api_key = st.sidebar.text_input("Groq API Key", type="password") if llm_provider == "☁️ Groq (Cloud)" else ""
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎨 Premium Tools")
     st.sidebar.caption("BYOK Mode Active")
     user_openai_key = st.sidebar.text_input("OpenAI API Key", type="password")
-    openai_key = user_openai_key if user_openai_key else st.secrets.get(
-        "OPENAI_API_KEY")
+    openai_key = user_openai_key if user_openai_key else st.secrets.get("OPENAI_API_KEY")
 
     st.sidebar.markdown("---")
-page = st.sidebar.radio("Navigation", [
-        "📜 DM's Guide",
-        "🆕 Patch Notes",
-        "📜 Session Recap",
-        "🛡️ Initiative Tracker",
-        "🐉 Monster Bestiary",
-        "🎨 Image Generator",
-        "📚 PDF-Lore Chat",
-        "🎙️ Audio Scribe",  # <--- NEW TAB ADDED HERE
-        "⚔️ Encounter Architect",
-        "🎭 NPC Quick Forge",
-        "⚙️ Trap Architect",
-        "📜 Scribe's Handouts",
-        "🗑️ Pocket Trash Loot",
-        "👑 The Dragon's Hoard",
-        "🌍 Worldbuilder",
-        "🤖 DM Assistant",
-        "🤝 DM Matchmaker",
-        "🧬 Homebrew Forge",
-        "🏛️ Community Vault",
-        "🍻 Tavern Rumor Mill",
-        "💰 Dynamic Shops",
-        "💎 Magic Item Artificer",
-        "⭐ Give Feedback"
+    page = st.sidebar.radio("Navigation", [
+        "📜 DM's Guide", "🆕 Patch Notes", "📜 Session Recap", "🛡️ Initiative Tracker","📋 Player Cheat Sheet",
+        "🐉 Monster Bestiary", "👁️ Cartographer's Eye", "🎨 Image Generator", "📚 PDF-Lore Chat", "🎙️ Audio Scribe",
+        "⚖️ Real-Time Rules Lawyer", "⚔️ Encounter Architect","⚖️ Action Economy Analyzer", "🎭 NPC Quick Forge", 
+        "⚙️ Trap Architect", "📜 Scribe's Handouts", "🗑️ Pocket Trash Loot", "👑 The Dragon's Hoard", "🌍 Worldbuilder", 
+        "🤖 DM Assistant", "🤝 DM Matchmaker", "🌐 Auto-Wiki Export", "🧬 Homebrew Forge", "🔄 2014->2024 Converter",
+        "🏛️ Community Vault", "🍻 Tavern Rumor Mill", "💰 Dynamic Shops", "💎 Magic Item Artificer", "⭐ Give Feedback",
+        "🦹 Villain Architect"
     ])
 
-st.sidebar.markdown("---")
-st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
-# --- DISCORD COMMUNITY HUB ---
-st.sidebar.markdown("---")
-st.sidebar.markdown(
-    """
-    <div style="text-align: center;">
-        <p style="color: #00FF00; font-family: 'MedievalSharp', cursive; margin-bottom: 10px; font-size: 1.1rem;">The Deep-Delver's Grimoire</p>
-        <a href="https://discord.gg/NeG54aJrB3" target="_blank" style="text-decoration: none;">
-            <div style="
-                background-color: #5865F2;
-                color: white;
-                padding: 12px;
-                border-radius: 8px;
-                font-weight: bold;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                border: 2px solid #00FF00;
-                transition: 0.3s;
-                box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);">
-                <img src="https://assets-global.website-files.com/6257adef93467e05d00d8c2d/636e0a2249aa57ef0c345678_Full%20Logo%20White.png" width="22" style="filter: brightness(0) invert(1);">
-                ENTER THE DISCORD
-            </div>
-        </a>
-        <p style="font-size: 0.85rem; color: #00FF00; margin-top: 10px; font-family: monospace; letter-spacing: 1px;">FORGE • SHARE • SURVIVE</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    st.sidebar.markdown("---")
+    st.sidebar.markdown('<div style="text-align: center;"><a href="https://buymeacoffee.com/calebmccombs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a></div>', unsafe_allow_html=True)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+        """
+        <div style="text-align: center;">
+            <p style="color: #00FF00; font-family: 'MedievalSharp', cursive; margin-bottom: 10px; font-size: 1.1rem;">The Deep-Delver's Grimoire</p>
+            <a href="https://discord.gg/NeG54aJrB3" target="_blank" style="text-decoration: none;">
+                <div style="background-color: #5865F2; color: white; padding: 12px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border: 2px solid #00FF00; transition: 0.3s; box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);">
+                    <img src="https://assets-global.website-files.com/6257adef93467e05d00d8c2d/636e0a2249aa57ef0c345678_Full%20Logo%20White.png" width="22" style="filter: brightness(0) invert(1);">
+                    ENTER THE DISCORD
+                </div>
+            </a>
+            <p style="font-size: 0.85rem; color: #00FF00; margin-top: 10px; font-family: monospace; letter-spacing: 1px;">FORGE • SHARE • SURVIVE</p>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
-    # --- 🎲 GLOBAL DICE ROLLER (Restored!) ---
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎲 Quick Roll")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎲 Quick Roll")
 
-    # Put the dropdown and button side-by-side to save space
-d_col1, d_col2 = st.sidebar.columns([1, 1])
-dice_type = d_col1.selectbox("Dice", [
-                             "d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
-if d_col2.button("Roll!"):
+    d_col1, d_col2 = st.sidebar.columns([1, 1])
+    dice_type = d_col1.selectbox("Dice", ["d20", "d12", "d10", "d8", "d6", "d4", "d100"], label_visibility="collapsed")
+    if d_col2.button("Roll!"):
         sides = int(dice_type.replace("d", ""))
         result = random.randint(1, sides)
-        st.sidebar.markdown(
-            f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<div class='dice-result'>🎲 {result}</div>", unsafe_allow_html=True)
 
-if page == "📜 DM's Guide":
-    st.title("📜 Welcome to the DM Co-Pilot")
+    if page == "📜 DM's Guide":
+        st.title("📜 Welcome to the DM Co-Pilot")
+        st.markdown("### 📡 System Telemetry")
+        c1, c2, c3 = st.columns(3)
+        c1.metric(label="Global Interactions", value="1,672+", delta="Top 8 Viberank")
 
-    # --- LIVE TELEMETRY DASHBOARD ---
-    st.markdown("### 📡 System Telemetry")
-    c1, c2, c3 = st.columns(3)
-    c1.metric(label="Global Interactions", value="1,100+", delta="Viral Surge")
-
-    vault_count = "Offline"
-    if db is not None:
-        try:
-            docs = db.collection("community_vault").stream()
-            vault_count = sum(1 for _ in docs)
-        except Exception:
-            vault_count = "Error"
+        vault_count = "Offline"
+        if db is not None:
+            try:
+                docs = db.collection("community_vault").stream()
+                vault_count = sum(1 for _ in docs)
+            except Exception:
+                vault_count = "Error"
+                
+        c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
+        c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
             
-    c2.metric(label="Vault Creations", value=vault_count, delta="Live Database")
-    c3.metric(label="Server Status", value="Online", delta="By Groq & Ollama")
-        
-    st.divider()
-    st.markdown("""
-        <div class='stat-card'>
-        ### 🐉 Masterwork Edition: Pro Tips
-        * **🎙️ Voice Brainstorming [NEW]:** Jump into the new **Audio Scribe** tab to speak your chaotic campaign ideas out loud and let the AI instantly organize them.
-        * **🛡️ Enterprise Stability [NEW]:** VTT exports are now protected by Pydantic JSON Bouncers. Say goodbye to broken stat blocks!
-        * **VTT Integration:** Use the **Download JSON** button in the Bestiary or Artificer to export stats directly to Foundry VTT or Roll20.
-        * **Session Persistence:** You can now switch tabs without losing your work! The app remembers your last generated item or monster.
-        * **The Vault:** Don't just generate—Publish! Share your best creations with the global DM community in the **Community Vault**.
-        </div>
-        """, unsafe_allow_html=True)
+        st.divider()
+        st.markdown("""
+            <div class='stat-card'>
+            ### 👑 Masterwork Edition: What's New
+            * **🎬 The Cinematic Recap:** Turn your session notes into a dramatically narrated MP3 audio file with a custom AI-painted cover image to drop in your Discord.
+            * **⚖️ Real-Time Rules Lawyer:** Table argument? Record the rules dispute and let the AI search the 5e SRD for the definitive, official ruling.
+            * **🌐 Auto-Wiki Export:** Generate a fully coded, standalone HTML website containing all your forged session lore to share with players.
+            * **🎙️ Live Table Sentiment Analysis:** The Audio Scribe can now analyze your session's pacing and generate sudden "Tension Spikes".
+            * **🔗 The D&D Beyond Bridge:** Paste a character URL to instantly scrape their live stats into your Player Cheat Sheet.
+            * **👁️ Cartographer's Eye:** Upload hand-drawn maps and let Vision AI perfectly map wall/door geometry for VTT imports.
+            </div>
+            """, unsafe_allow_html=True)
 
-    st.markdown("### 🗺️ Quick Start")
-    st.markdown("""
-        * **🐉 Bestiary:** Generate VTT-ready monsters with structured JSON stat-blocks.
-        * **💎 Artificer:** Forge magic items that persist across your entire session.
-        * **🛡️ Tracker:** Run combat effortlessly with our built-in Initiative & HP tracker.
-        """)
+        st.markdown("### 🗺️ Quick Start Guide")
+        st.markdown("""
+            * **Combat Prep:** Use the **Action Economy Analyzer** and **Encounter Architect** to mathematically balance fights before they happen.
+            * **Live Sessions:** Keep the **Initiative Tracker** and **Player Cheat Sheet** open. They run entirely in browser memory for zero latency during live games.
+            * **VTT Integration:** Use the **Send to Live VTT** or **Download JSON** buttons to export data directly into Foundry VTT or Roll20.
+            * **The Community Vault:** Publish your best monsters and magic items to the live cloud database for other DMs to use.
+            """)
+            
+    elif page == "🆕 Patch Notes":
+        st.title("🆕 The Forge (Patch Notes)")
+        st.markdown("Welcome to the dev log! Here is what is newly forged in the Masterwork Edition based on your feedback:")
         
-elif page == "🆕 Patch Notes":
-    st.title("🆕 Patch Notes")
-    st.success("🎙️ **v2.7 Update:** The Audio Scribe! Brainstorm out loud with our new Groq Whisper AI voice-to-text integration.")
-    st.success("🛡️ **v2.6 Update:** Enterprise Architecture! Added Pydantic JSON Bouncers and Tenacity auto-retries for 100% stable VTT exports.")
-    st.success("✅ **v2.5 Update:** Masterwork Persistence! Added Global Session Memory to the Bestiary and Artificer.")
-    st.success("✅ **v2.4 Update:** VTT Data Pipeline integrated for structured JSON exports.")
-    st.success("✅ **v2.3 Update:** AI Session Chronicler added for player recaps.")
+        st.success("🎬 **v2.19 Update:** The Cinematic Recap! The Session Recap tool is now multi-modal. Paste your notes to generate a dramatic script, a custom DALL-E 3 cover image, and a downloadable Voiceover narration using OpenAI TTS.")
+        st.success("⚖️ **v2.18 Update:** The Real-Time Rules Lawyer! Settle table disputes instantly by recording the question and getting an official, objective 5e SRD ruling.")
+        st.success("🌐 **v2.17 Update:** The Auto-Wiki Generator! You can now instantly compile all the monsters, items, and villains you've generated into a beautifully styled, standalone HTML website file to share with your players.")
+        st.success("🎙️ **v2.16 Update:** Live Table Sentiment Analysis! The Audio Scribe can now analyze your session's pacing and generate sudden 'Tension Spikes' to wake your table up.")
+        st.success("🔗 **v2.15 Update:** The D&D Beyond Bridge! Paste public D&D Beyond links into the Player Cheat Sheet to instantly scrape and sync their Name, Class, and Max HP.")
+        
+        st.divider()
+        st.markdown("### 🔮 The Horizon...")
+        st.markdown("* **Enterprise Scale AI:** Preparing architecture to support massive tabletop VTT ecosystems and proprietary D&D integrations.")
+    elif page == "📋 Player Cheat Sheet":
+        st.title("📋 Player Cheat Sheet")
+        st.markdown("A zero-lag tracker for your party's core stats. Edit directly in the table below—you can even add or delete rows! Changes save automatically to your session.")
+        
+        with st.expander("🔗 Import from D&D Beyond"):
+            st.markdown("Paste a public D&D Beyond character URL to automatically scrape their core stats into your sheet.")
+            ddb_url = st.text_input("D&D Beyond URL", placeholder="e.g., https://www.dndbeyond.com/characters/12345678")
+            
+            if st.button("Scrape Character Sheet 🚀"):
+                if ddb_url:
+                    with st.spinner("Breaching the D&D Beyond API..."):
+                        try:
+                            match = re.search(r"characters/(\d+)", ddb_url)
+                            if match:
+                                char_id = match.group(1)
+                                api_url = f"https://character-service.dndbeyond.com/character/v5/character/{char_id}"
+                                
+                                response = requests.get(api_url, timeout=10)
+                                if response.status_code == 200:
+                                    data = response.json()
+                                    if "data" in data:
+                                        char_data = data["data"]
+                                        
+                                        name = char_data.get("name", "Unknown Hero")
+                                        base_hp = char_data.get("baseHitPoints", 10)
+                                        bonus_hp = char_data.get("bonusHitPoints", 0)
+                                        max_hp = base_hp + bonus_hp
+                                        
+                                        classes = [c["definition"]["name"] for c in char_data.get("classes", [])]
+                                        class_str = "/".join(classes) if classes else "Unknown Class"
+                                        
+                                        new_char = {"Name": name, "Class": class_str, "AC": 15, "Passive Perception": 10, "Spell Save DC": 13, "Max HP": max_hp}
+                                        new_row_df = pd.DataFrame([new_char])
+                                        st.session_state.party_stats = pd.concat([st.session_state.party_stats, new_row_df], ignore_index=True)
+                                        
+                                        st.success(f"⚡ Successfully scraped and imported {name} ({class_str})!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Character data not found. Ensure the character is set to 'Public' on D&D Beyond.")
+                                else:
+                                    st.error(f"Failed to connect to D&D Beyond API. Status: {response.status_code}")
+                            else:
+                                st.error("Invalid URL format. Make sure it contains 'characters/12345678'.")
+                        except Exception as e:
+                            st.error(f"Data Pipeline Error: {e}")
+                else:
+                    st.warning("⚠️ Please paste a URL first.")
 
-elif page == "📜 Session Recap":
-        st.title("📜 AI Session Chronicler")
-        st.info("Paste your raw notes (NPCs, loot, kills) and I'll forge a professional recap.")
+        st.divider()
+
+        st.session_state.party_stats = st.data_editor(
+            st.session_state.party_stats, 
+            num_rows="dynamic", 
+            use_container_width=True,
+            hide_index=True
+        )
+
+    elif page == "📜 Session Recap":
+        st.title("🎬 The Cinematic Recap")
+        st.info("Paste your raw notes (NPCs, loot, kills). The AI will forge a professional recap script, paint an epic cover image, and narrate it out loud!")
         raw_notes = st.text_area("Your Notes:", height=200)
-        if st.button("Generate Recap"):
-            prompt = f"Summarize these notes into a dramatic recap for players with sections for 'Major Events', 'Loot', and 'Remaining Mysteries':\n\n{raw_notes}"
-            recap = get_ai_response(prompt, llm_provider, user_api_key)
-            st.markdown(f"<div class='stat-card'>{recap}</div>", unsafe_allow_html=True)
-            st.download_button("📥 Download Recap", recap, file_name="session_recap.txt")
+        
+        if st.button("Generate Cinematic Recap 🎥", type="primary"):
+            if not openai_key:
+                st.error("⚠️ This multi-modal feature requires an OpenAI API Key in the Premium Tools sidebar.")
+            else:
+                with st.spinner("Writing the script..."):
+                    prompt = f"Summarize these notes into a dramatic, 60-second opening monologue recap for a D&D session. Make it sound like a cinematic movie trailer:\n\n{raw_notes}"
+                    recap_script = get_ai_response(prompt, llm_provider, user_api_key)
+                    st.markdown(f"<div class='stat-card'>{recap_script}</div>", unsafe_allow_html=True)
+                    st.download_button("📥 Download Script", recap_script, file_name="session_recap.txt")
+                    
+                    st.divider()
+                    st.markdown("### 🍿 Multimedia Export")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        with st.spinner("Painting the scene (DALL-E 3)..."):
+                            try:
+                                client = OpenAI(api_key=openai_key)
+                                img_response = client.images.generate(
+                                    model="dall-e-3",
+                                    prompt=f"A cinematic, high-fantasy digital art painting representing this D&D session summary: {recap_script[:200]}",
+                                    size="1024x1024",
+                                    quality="standard",
+                                    n=1,
+                                )
+                                st.image(img_response.data[0].url, caption="Session Cover Art")
+                            except Exception as e:
+                                st.error(f"Image generation failed: {e}")
+                                
+                    with col2:
+                        with st.spinner("Recording the Voiceover (OpenAI TTS)..."):
+                            try:
+                                response = client.audio.speech.create(
+                                    model="tts-1",
+                                    voice="onyx", # Deep, cinematic, dramatic voice
+                                    input=recap_script[:4000] # API limit safeguard
+                                )
+                                response.stream_to_file("cinematic_recap.mp3")
+                                st.audio("cinematic_recap.mp3", format="audio/mp3")
+                                st.success("🎧 Audio ready! Download this and drop it in your Discord server.")
+                                with open("cinematic_recap.mp3", "rb") as audio_file:
+                                    st.download_button(label="📥 Download MP3", data=audio_file, file_name="cinematic_recap.mp3", mime="audio/mpeg")
+                            except Exception as e:
+                                st.error(f"Audio generation failed: {e}")
 
-elif page == "🛡️ Initiative Tracker":
-        st.title("🛡️ Initiative Tracker v2.1")
+        elif page == "🛡️ Initiative Tracker":
+         st.title("🛡️ Initiative Tracker v2.2")
+        
+        dnd_conditions = [
+            "Blinded", "Charmed", "Deafened", "Frightened", "Grappled", 
+            "Incapacitated", "Invisible", "Paralyzed", "Petrified", 
+            "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious", "Exhaustion"
+        ]
+
         with st.expander("➕ Add Combatant"):
             c1, c2, c3 = st.columns(3)
             name = c1.text_input("Name")
             init = c2.number_input("Roll", value=10)
             hp = c3.number_input("HP", value=15)
             if st.button("Add"):
-                st.session_state.combatants.append({"name": name, "init": init, "hp": hp})
+                st.session_state.combatants.append({
+                    "name": name, 
+                    "init": init, 
+                    "hp": hp, 
+                    "conditions": [] 
+                })
                 st.session_state.combatants = sorted(st.session_state.combatants, key=lambda x: x['init'], reverse=True)
                 st.rerun()
         
         for idx, c in enumerate(st.session_state.combatants):
-            cols = st.columns([3, 1, 1, 1])
+            if "conditions" not in c:
+                c["conditions"] = []
+
+            cols = st.columns([2, 1, 1, 3, 1])
             cols[0].write(f"**{c['name']}**")
             cols[1].write(f"⚔️ {c['init']}")
             cols[2].write(f"❤️ {c['hp']}")
-            if cols[3].button("🗑️", key=f"del_{idx}"):
+            
+            new_conditions = cols[3].multiselect(
+                "Conditions", 
+                options=dnd_conditions, 
+                default=c["conditions"], 
+                key=f"cond_{idx}",
+                label_visibility="collapsed" 
+            )
+            
+            if new_conditions != c["conditions"]:
+                st.session_state.combatants[idx]["conditions"] = new_conditions
+
+            if cols[4].button("🗑️", key=f"del_{idx}"):
                 st.session_state.combatants.pop(idx)
                 st.rerun()
 
-    # --- 🐛 THE GOBLIN BUG FIX & ⚡ THE SPEED FIX ---
-elif page == "🐉 Monster Bestiary":
+    elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (VTT JSON Integration)")
         st.markdown("Generate custom creatures formatted as structured JSON data for direct import into Foundry VTT or Roll20 APIs.")
         
-        # Initialize session state for the Bestiary if it doesn't exist
-        if "bestiary_json" not in st.session_state:
-            st.session_state.bestiary_json = None
-
         monster_type = st.selectbox("Creature Type", ["Aberration", "Beast", "Dragon", "Fiend", "Monstrosity", "Undead"])
         monster_cr = st.selectbox("Challenge Rating (CR)", ["1-4", "5-10", "11-16", "17-20", "21+"])
         custom_flavor = st.text_area("Monster Concept", placeholder="e.g., A mutated bear that breathes necrotic fire...")
@@ -387,36 +467,104 @@ elif page == "🐉 Monster Bestiary":
                   ]
                 }
                 """
-                
                 raw_json = get_ai_response(prompt, llm_provider, user_api_key)
                 cleaned_json = raw_json.replace("```json", "").replace("```", "").strip()
-                
-                # Save the result to the browser's session memory
                 st.session_state.bestiary_json = cleaned_json
 
-       # If there is a monster in memory, display it (even if they clicked away and came back)
         if st.session_state.bestiary_json:
             try:
-                import json
                 parsed_json = json.loads(st.session_state.bestiary_json)
-                
-                # --- 🛡️ THE BOUNCER IS ACTIVE ---
-                # This forces the JSON to match our exact VTT schema
                 validated_monster = MonsterStatblock(**parsed_json)
-                
-                # If it passes, we display the perfectly clean, validated data
                 st.json(validated_monster.model_dump())
                 
                 st.download_button(
-                    label="📥 Download JSON for VTT", 
+                    "📥 Download JSON for VTT", 
                     data=st.session_state.bestiary_json, 
                     file_name="monster_statblock.json", 
                     mime="application/json"
                 )
+                
+                st.divider()
+                st.markdown("### 🔌 Direct VTT Transmission")
+                st.markdown("Have the Foundry REST API module installed? Send this statblock directly into your live game.")
+                
+                foundry_url = st.text_input("VTT Webhook URL", placeholder="http://localhost:30000/api/your-endpoint", key="vtt_url_best")
+                
+                if st.button("🚀 Send to Live VTT", key="vtt_btn_best"):
+                    if foundry_url:
+                        with st.spinner("Transmitting across the weave..."):
+                            try:
+                                headers = {"Content-Type": "application/json"}
+                                response = requests.post(foundry_url, data=st.session_state.bestiary_json, headers=headers, timeout=5)
+                                
+                                if response.status_code in [200, 201]:
+                                    st.success("Success! The monster has materialized in your VTT.")
+                                    st.balloons()
+                                else:
+                                    st.error(f"Transmission failed. VTT responded with code: {response.status_code}")
+                            except requests.exceptions.RequestException:
+                                st.error("Could not connect to VTT. Ensure your Foundry server is running, the REST API module is active, and the URL is correct.")
+                    else:
+                        st.warning("⚠️ Please enter a valid VTT Webhook URL.")
+                        
             except Exception as e:
                 st.error("Error parsing JSON data. Please try forging again.")
                 st.write("Raw output for debugging:", st.session_state.bestiary_json)
-elif page == "🎨 Image Generator":
+
+    elif page == "👁️ Cartographer's Eye":
+        st.title("👁️ The Cartographer's Eye (Vision AI)")
+        st.markdown("Upload a photo of a hand-drawn dungeon map. The AI will analyze the geometry and generate a VTT-ready JSON file mapping out the walls and doors.")
+
+        if "map_json" not in st.session_state:
+            st.session_state.map_json = None
+
+        uploaded_map = st.file_uploader("Upload Map Image (JPG/PNG)", type=["jpg", "jpeg", "png"])
+        
+        if uploaded_map:
+            st.image(uploaded_map, caption="Scanned Blueprint", use_container_width=True)
+            
+            if st.button("Digitize Map for VTT 🚀", type="primary"):
+                if not openai_key:
+                    st.error("⚠️ This advanced vision feature requires an OpenAI API Key in the Premium Tools sidebar.")
+                else:
+                    with st.spinner("Analyzing spatial geometry and drawing coordinates..."):
+                        try:
+                            import base64
+                            
+                            base64_image = base64.b64encode(uploaded_map.getvalue()).decode('utf-8')
+                            
+                            client = OpenAI(api_key=openai_key)
+                            
+                            response = client.chat.completions.create(
+                                model="gpt-4o",
+                                messages=[
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {"type": "text", "text": "You are an expert Virtual Tabletop data engineer. Look at this hand-drawn D&D map. Identify the layout and generate a JSON array of wall coordinates (x1, y1, x2, y2) that represent the main structural walls and doors. Format the response ONLY as valid JSON. Do not include any conversational text. Example format: {\"walls\": [{\"c\": [0, 0, 100, 0], \"type\": \"wall\"}, {\"c\": [100, 0, 100, 100], \"type\": \"door\"}]}."},
+                                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                        ]
+                                    }
+                                ],
+                                max_tokens=1500
+                            )
+                            
+                            vision_json = response.choices[0].message.content.replace("```json", "").replace("```", "").strip()
+                            st.session_state.map_json = vision_json
+                            
+                        except Exception as e:
+                            st.error(f"Vision processing failed: {e}")
+                            
+        if st.session_state.map_json:
+            st.success("Geometry extracted successfully!")
+            try:
+                st.json(json.loads(st.session_state.map_json))
+                st.download_button("📥 Download Wall Data (JSON)", st.session_state.map_json, file_name="vtt_walls.json", mime="application/json")
+            except Exception as e:
+                st.error("The AI returned invalid JSON. Please try running the scan again.")
+                st.code(st.session_state.map_json)
+
+    elif page == "🎨 Image Generator":
         st.title("🎨 AI Image Artificer")
         prompt = st.text_area("Art Prompt:")
         if st.button("Forge Image"):
@@ -427,17 +575,89 @@ elif page == "🎨 Image Generator":
                 response = client.images.generate(model="dall-e-3", prompt=prompt)
                 st.image(response.data[0].url)
 
-elif page == "📚 PDF-Lore Chat":
-        st.title("📚 PDF-Lore Chat")
-        pdf = st.file_uploader("Upload PDF", type="pdf")
-        q = st.text_input("Question:")
-        if pdf and q and st.button("Query"):
-            reader = PyPDF2.PdfReader(pdf)
-            text = "".join([p.extract_text() for p in reader.pages[:3]])
-            st.write(get_ai_response(f"Context: {text}\nQuestion: {q}", llm_provider, user_api_key))
+    elif page == "📚 PDF-Lore Chat":
+        st.title("🕸️ The Campaign Lore Weaver")
+        st.markdown("Upload your messy campaign notes, module PDFs, or lore documents. The AI will extract the text and act as your personal Campaign Historian, answering questions based *only* on the provided document.")
 
-    # --- ⚔️ NEW: ENCOUNTER ARCHITECT ---
-elif page == "⚔️ Encounter Architect":
+        if "pdf_text" not in st.session_state:
+            st.session_state.pdf_text = ""
+
+        uploaded_file = st.file_uploader("Upload Campaign Document (PDF)", type="pdf")
+        
+        if uploaded_file is not None:
+            if st.button("Extract Lore 📖"):
+                with st.spinner("Weaving the threads of history... (Reading PDF)"):
+                    try:
+                        reader = PyPDF2.PdfReader(uploaded_file)
+                        extracted_text = ""
+                        max_pages = min(len(reader.pages), 15)
+                        for i in range(max_pages):
+                            text = reader.pages[i].extract_text()
+                            if text:
+                                extracted_text += text + "\n"
+                        
+                        st.session_state.pdf_text = extracted_text
+                        st.success(f"⚡ Successfully memorized {max_pages} pages of lore! You may now ask questions.")
+                    except Exception as e:
+                        st.error(f"Failed to read the ancient texts: {e}")
+
+        if st.session_state.pdf_text:
+            st.divider()
+            st.markdown("### 🔮 Ask the Historian")
+            query = st.text_input("What do you want to know about this document?", placeholder="e.g., What was the name of the blacksmith in the starting town?")
+            
+            if st.button("Query the Weave ✨", type="primary"):
+                if query:
+                    with st.spinner("Consulting the archives..."):
+                        prompt = f"""
+                        You are the 'Campaign Lore Weaver', an expert D&D historian. 
+                        Read the following campaign document text and answer the DM's question based ONLY on this text. 
+                        If the answer is not in the text, say "I cannot find that in the current archives."
+                        
+                        --- DOCUMENT TEXT ---
+                        {st.session_state.pdf_text}
+                        
+                        --- DM'S QUESTION ---
+                        {query}
+                        """
+                        answer = get_ai_response(prompt, llm_provider, user_api_key)
+                        st.markdown(f"<div class='stat-card'>{answer}</div>", unsafe_allow_html=True)
+                else:
+                    st.warning("⚠️ Please ask a question first!")
+
+    elif page == "⚖️ Real-Time Rules Lawyer":
+        st.title("⚖️ Real-Time Rules Lawyer")
+        st.markdown("Table argument breaking out? Record the rules dispute, and the AI will instantly search its knowledge of the 5e SRD and provide the objective, official ruling.")
+
+        audio_file = st.audio_input("Record the rules question/argument here:")
+        if audio_file is not None:
+            with st.spinner("Consulting the sacred texts (Transcribing)..."):
+                try:
+                    from groq import Groq
+                    api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
+                    if not api_key:
+                        st.error("⚠️ Please enter your Groq API Key in the sidebar.")
+                    else:
+                        client = Groq(api_key=api_key)
+                        transcription = client.audio.transcriptions.create(file=("audio.wav", audio_file.read()), model="whisper-large-v3")
+                        st.info(f"**Heard:** \"{transcription.text}\"")
+
+                        with st.spinner("Formulating official ruling..."):
+                            prompt = f"""
+                            You are the ultimate, objective D&D 5e Rules Lawyer. 
+                            A dispute has broken out at the table. Listen to the transcription of the argument/question and provide the exact, official ruling based on the D&D 5e Player's Handbook and Dungeon Master's Guide. 
+                            Cite the rule clearly, explain how it applies to the situation, and give a definitive "Yes" or "No" verdict if applicable.
+                            Do not be conversational. Be authoritative and precise.
+                            
+                            Transcription: {transcription.text}
+                            """
+                            ruling = get_ai_response(prompt, llm_provider, user_api_key)
+                            st.markdown(f"<div class='stat-card'>{ruling}</div>", unsafe_allow_html=True)
+
+                except Exception as e:
+                    st.error(f"Failed to consult the rules: {e}")
+
+    elif page == "⚔️ Encounter Architect":
         st.title("⚔️ Encounter Architect & VTT Export")
         st.markdown("Generate balanced encounters and export them directly to your Virtual Tabletop.")
         
@@ -445,52 +665,282 @@ elif page == "⚔️ Encounter Architect":
         party_level = c1.number_input("Average Party Level", min_value=1, max_value=20, value=5)
         party_size = c2.number_input("Number of Players", min_value=1, max_value=10, value=4)
         difficulty = c3.selectbox("Difficulty", ["Easy", "Medium", "Hard", "Deadly", "Boss Mode"])
-        
         environment = st.text_input("Environment / Theme (e.g., Volcano, Swamp, Undead Crypt)")
         
         if st.button("Generate Encounter 🎲"):
-            if not environment:
-                environment = "Generic"
-            
+            if not environment: environment = "Generic"
             prompt = f"Create a D&D 5e {difficulty} encounter for {party_size} level {party_level} players in a {environment} environment. Include the monster names, their CR, a brief tactical description of the terrain, and the total XP. Provide stat blocks if it's a Boss Mode."
-            
             with st.spinner("Forging encounter..."):
                 encounter_text = get_ai_response(prompt, llm_provider, user_api_key)
                 st.markdown(f"<div class='stat-card'>{encounter_text}</div>", unsafe_allow_html=True)
-                # --- 📈 RESTORED: ENCOUNTER TENSION GRAPH ---
+                
                 st.markdown("### 📈 Expected Tension Curve")
-                import pandas as pd
-                chart_data = pd.DataFrame({
-                        "Rounds": ["Round 1 (Opening)", "Round 2 (Escalation)", "Round 3 (Climax)", "Round 4 (Resolution)"],
-                        "Tension Level": [40, 75, 100, 25]
-                    }).set_index("Rounds")
+                chart_data = pd.DataFrame({"Rounds": ["Round 1 (Opening)", "Round 2 (Escalation)", "Round 3 (Climax)", "Round 4 (Resolution)"], "Tension Level": [40, 75, 100, 25]}).set_index("Rounds")
                 st.line_chart(chart_data)
                 
-                # --- FOUNDRY VTT EXPORT LOGIC ---
-                vtt_data = {
-                    "name": f"{difficulty} {environment} Encounter",
-                    "type": "encounter",
-                    "description": encounter_text,
-                    "level": party_level,
-                    "players": party_size
-                }
+                vtt_data = {"name": f"{difficulty} {environment} Encounter", "type": "encounter", "description": encounter_text, "level": party_level, "players": party_size}
                 vtt_json = json.dumps(vtt_data, indent=4)
+                st.download_button("📥 Export for Foundry VTT (.json)", data=vtt_json, file_name=f"{environment.lower().replace(' ', '_')}_encounter.json", mime="application/json")
                 
-                st.download_button(
-                    "📥 Export for Foundry VTT (.json)",
-                    data=vtt_json,
-                    file_name=f"{environment.lower().replace(' ', '_')}_encounter.json",
-                    mime="application/json"
-                )
+                st.divider()
+                st.markdown("### 🔌 Export to Virtual Tabletop")
+                st.markdown("Send this generated encounter directly to your live VTT server via REST API.")
+                
+                col_vtt1, col_vtt2 = st.columns([1, 2])
+                with col_vtt1:
+                    vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_enc")
+                with col_vtt2:
+                    webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_enc")
+                
+                if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_enc"):
+                    if not webhook_url:
+                        st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                    else:
+                        with st.spinner(f"Establishing connection to {vtt_target}..."):
+                            try:
+                                headers = {'Content-Type': 'application/json'}
+                                payload = vtt_json
+                                response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                                if response.status_code in [200, 201]:
+                                    st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                    st.balloons()
+                                else:
+                                    st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                            except requests.exceptions.ConnectionError:
+                                st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                            except Exception as e:
+                                st.error(f"An unexpected error occurred: {e}")
 
-    # --- 🏛️ NEW: COMMUNITY VAULT LOGIC ---
-elif page == "🏛️ Community Vault":
-        st.title("🏛️ The Community Vault")
-        st.markdown("Welcome to the Vault! Share your best generated monsters, encounters, and items with the 400+ DMs using DM Co-Pilot.")
+    elif page == "⚖️ Action Economy Analyzer":
+        st.title("⚖️ Action Economy Analyzer")
+        st.markdown("In D&D 5e, the side that takes the most actions usually wins. Calculate the pure mathematical balance of your encounter to see if your boss will get steamrolled in round one.")
 
-        if db is None:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### 🦸‍♂️ The Party")
+            party_size = st.number_input("Party Size", min_value=1, max_value=10, value=4)
+            party_actions_multiplier = st.slider("Average Actions per Player", min_value=1.0, max_value=3.0, value=1.5, step=0.5, help="Level 1-4 = 1 action. Level 5+ = 1.5 to 2 actions (Extra Attack, Bonus Actions).")
+            
+        with c2:
+            st.markdown("### 🐉 The Encounter")
+            boss_actions = st.number_input("Boss Attacks/Actions per turn", min_value=1, max_value=10, value=2)
+            legendary = st.checkbox("Has Legendary Actions? (+3 Actions)")
+            lair = st.checkbox("Has Lair Actions? (+1 Action)")
+            minions = st.number_input("Number of Minions", min_value=0, max_value=20, value=0)
+            
+        st.divider()
+        
+        total_party_actions = party_size * party_actions_multiplier
+        total_monster_actions = boss_actions + (3 if legendary else 0) + (1 if lair else 0) + minions
+        
+        ratio = total_party_actions / total_monster_actions if total_monster_actions > 0 else total_party_actions
+        
+        status = "Balanced ⚔️"
+        color = "off"
+        if ratio >= 2.0:
+            status = "Boss gets steamrolled! ⚠️"
+            color = "normal"
+        elif ratio <= 0.6:
+            status = "High risk of TPK! 💀"
+            color = "inverse"
+
+        st.markdown("### 📊 The Action Ratio")
+        c3, c4, c5 = st.columns(3)
+        c3.metric("Party Actions per Round", f"{total_party_actions:.1f}")
+        c4.metric("Monster Actions per Round", f"{total_monster_actions}")
+        c5.metric("Advantage Ratio", f"{ratio:.1f} : 1", delta=status, delta_color=color)
+        
+        if st.button("Generate Balancing Strategy 🧠"):
+            with st.spinner("Consulting the Grandmaster..."):
+                prompt = f"""
+                You are an expert D&D 5e combat designer. I am balancing an encounter. 
+                The party has {total_party_actions} actions per round. 
+                The enemy side has {total_monster_actions} actions per round. 
+                The math ratio is {ratio:.1f} to 1.
+                
+                Based on this ratio ({status}), give me 3 specific, highly tactical suggestions to balance this fight so it is challenging but fair. 
+                Do NOT just suggest "adding more HP." Focus on mechanics, dynamic terrain, legendary resistances, minion roles, or objective-based combat.
+                Format the response clearly with Markdown bullet points.
+                """
+                
+                advice = get_ai_response(prompt, llm_provider, user_api_key)
+                st.info(advice)
+    
+    elif page == "🦹 Villain Architect":
+         st.title("🦹 The Villain Architect")
+         st.markdown("Generate a 'Timeline of Evil' so you always know what the BBEG is doing off-screen while your players are distracted.")
+        
+         c1, c2 = st.columns(2)
+         villain_archetype = c1.selectbox("Archetype", ["Necromancer", "Corrupt Politician", "Ancient Dragon", "Cult Leader", "Fey Trickster", "Warlord"])
+         villain_goal = c2.selectbox("Ultimate Goal", ["Summon a Dark God", "Usurp the Throne", "Destroy a City", "Achieve Immortality", "Hoard Magical Artifacts"])
+        
+         custom_villain_details = st.text_area("Specific Details (Optional)", placeholder="e.g., His name is Lord Vane, he controls an army of clockwork soldiers...")
+        
+         if st.button("Draft the Master Plan 📜"):
+            with st.spinner("Plotting your party's demise..."):
+                prompt = f"""
+                You are an expert D&D 5e Dungeon Master. Create a villain and a 'Timeline of Evil' for a {villain_archetype} whose ultimate goal is to {villain_goal}. 
+                Additional details: {custom_villain_details}.
+                
+                Format the response clearly using Markdown:
+                1. **Villain Profile:** Name, brief appearance, and core motivation.
+                2. **The Timeline:** A 5-step timeline of what they will accomplish if the players do NOT intervene (e.g., Step 1: Kidnap the blacksmith, Step 5: Summon the meteor).
+                3. **The 'Tell':** What clues are left behind in the world at Step 1 and 2 for the players to notice?
+                """
+                
+                villain_plan = get_ai_response(prompt, llm_provider, user_api_key)
+                st.session_state.villain_json = villain_plan
+                
+         if st.session_state.villain_json:
+            st.markdown(f"<div class='stat-card'>{st.session_state.villain_json}</div>", unsafe_allow_html=True)
+            st.download_button("📥 Download Master Plan", st.session_state.villain_json, file_name="villain_timeline.txt")
+
+            st.divider()
+            st.markdown("### 🔌 Export to Virtual Tabletop")
+            st.markdown("Send this Villain Outline to your VTT journals.")
+            
+            col_vtt1, col_vtt2 = st.columns([1, 2])
+            with col_vtt1:
+                vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_vil")
+            with col_vtt2:
+                webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_vil")
+            
+            if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_vil"):
+                if not webhook_url:
+                    st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                else:
+                    with st.spinner(f"Establishing connection to {vtt_target}..."):
+                        try:
+                            headers = {'Content-Type': 'application/json'}
+                            payload = json.dumps({"name": "Villain Timeline", "content": st.session_state.villain_json})
+                            response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                            if response.status_code in [200, 201]:
+                                st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                st.balloons()
+                            else:
+                                st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                        except requests.exceptions.ConnectionError:
+                            st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                        except Exception as e:
+                            st.error(f"An unexpected error occurred: {e}")
+
+    elif page == "🤝 DM Matchmaker":
+        st.title("🤝 DM Matchmaker")
+        st.text_input("Discord Handle")
+        st.selectbox("Role", ["Looking for DM", "Looking for Players"])
+        st.text_area("Campaign Style / Timezone")
+        if st.button("Post to Matchmaker Board"):
+            st.success("Board updated! (Simulated for now until we connect the live Matchmaker DB)")
+            st.balloons()
+
+    elif page == "🌐 Auto-Wiki Export":
+        st.title("🌐 The Auto-Wiki Generator")
+        st.markdown("Instantly compile all the monsters, items, and lore you've generated this session into a standalone, beautiful HTML website. You can send this file directly to your players to read between sessions!")
+
+        if st.button("Generate Campaign Wiki 🪄", type="primary"):
+            with st.spinner("Writing HTML and CSS..."):
+                monster_data = st.session_state.get("forged_monster", "")
+                villain_data = st.session_state.get("villain_json", "")
+                magic_item = st.session_state.get("artificer_json", "")
+                
+                if not monster_data and not villain_data and not magic_item:
+                    st.warning("⚠️ Your session memory is currently empty. Go forge a monster, item, or villain first!")
+                else:
+                    html_content = f"""
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Campaign Lore Wiki</title>
+                        <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+                        <style>
+                            body {{
+                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                background-color: #000000;
+                                color: #00FF00;
+                                margin: 0;
+                                padding: 20px;
+                            }}
+                            h1, h2, h3 {{
+                                font-family: 'MedievalSharp', cursive;
+                                border-bottom: 1px solid #00FF00;
+                                padding-bottom: 5px;
+                                text-shadow: 0 0 10px #00FF00;
+                            }}
+                            .container {{
+                                max-width: 800px;
+                                margin: auto;
+                                background: #0a0a0a;
+                                padding: 30px;
+                                border-radius: 8px;
+                                border-left: 10px solid #00FF00;
+                                box-shadow: 0 4px 15px rgba(0, 255, 0, 0.2);
+                            }}
+                            .section {{
+                                margin-bottom: 40px;
+                            }}
+                            pre {{
+                                background: #000000;
+                                padding: 15px;
+                                border-radius: 5px;
+                                overflow-x: auto;
+                                color: #00FF00;
+                                border: 1px dashed #00FF00;
+                                white-space: pre-wrap;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h1>🐉 Campaign Lore Wiki</h1>
+                            <p>Welcome, adventurers. Here is the latest knowledge uncovered in your travels...</p>
+                    """
+                    
+                    if monster_data:
+                        html_content += f"""
+                            <div class="section">
+                                <h2>🧬 Newly Discovered Creature</h2>
+                                <pre>{monster_data}</pre>
+                            </div>
+                        """
+                    if magic_item:
+                        html_content += f"""
+                            <div class="section">
+                                <h2>💎 Legendary Artifacts & Items</h2>
+                                <pre>{magic_item}</pre>
+                            </div>
+                        """
+                    if villain_data:
+                        html_content += f"""
+                            <div class="section">
+                                <h2>🦹 Dark Rumors & Timelines</h2>
+                                <pre>{villain_data}</pre>
+                            </div>
+                        """
+                    
+                    html_content += """
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    st.success("⚡ Wiki Generated! Click below to download your interactive HTML file.")
+                    st.balloons()
+                    st.download_button(
+                        label="📥 Download Campaign Wiki (index.html)",
+                        data=html_content,
+                        file_name="campaign_wiki.html",
+                        mime="text/html"
+                    )
+
+    elif page == "🏛️ Community Vault":
+         st.title("🏛️ The Community Vault")
+         st.markdown("Welcome to the Vault! Share your best generated monsters, encounters, and items with the 400+ DMs using DM Co-Pilot.")
+
+         if db is None:
             st.error("Database connection offline. Cannot access the Vault.")
-        else:
+         else:
             with st.expander("➕ Publish a New Creation", expanded=False):
                 creator_name = st.text_input("Your DM Name / Handle", value="Anonymous DM")
                 creation_title = st.text_input("Name of this Creation", placeholder="e.g., The Shadow Goblin Ambush")
@@ -500,14 +950,7 @@ elif page == "🏛️ Community Vault":
                 if st.button("Publish to Vault 🚀"):
                     if creation_title and creation_content:
                         try:
-                            doc_ref = db.collection("community_vault").document()
-                            doc_ref.set({
-                                "creator": creator_name,
-                                "title": creation_title,
-                                "type": creation_type,
-                                "content": creation_content,
-                                "timestamp": firestore.SERVER_TIMESTAMP
-                            })
+                            db.collection("community_vault").document().set({"creator": creator_name, "title": creation_title, "type": creation_type, "content": creation_content, "timestamp": firestore.SERVER_TIMESTAMP})
                             st.success(f"Legendary! '{creation_title}' is now in the Community Vault.")
                             st.balloons()
                         except Exception as e:
@@ -517,13 +960,10 @@ elif page == "🏛️ Community Vault":
 
             st.divider()
             st.subheader("🔍 Browse Community Creations")
-            
-            if st.button("🔄 Refresh Vault"):
-                pass 
+            if st.button("🔄 Refresh Vault"): pass 
                 
             try:
                 vault_docs = db.collection("community_vault").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(10).stream()
-                
                 found_items = False
                 for doc in vault_docs:
                     found_items = True
@@ -531,192 +971,215 @@ elif page == "🏛️ Community Vault":
                     with st.expander(f"{data.get('type', 'Item')} | {data.get('title', 'Untitled')} (by {data.get('creator', 'Unknown')})"):
                         st.text(data.get('content', 'No content available.'))
                         st.download_button("📥 Download", data.get('content', ''), file_name=f"{data.get('title', 'vault_item')}.txt", key=doc.id)
-                        
                 if not found_items:
                     st.info("The Vault is currently empty. Be the first to publish something!")
             except Exception as e:
                 st.error(f"Could not load the Vault. Error: {e}")
 
-    # --- 🍻 NEW: TAVERN RUMOR MILL ---
-elif page == "🍻 Tavern Rumor Mill":
+    elif page == "🍻 Tavern Rumor Mill":
         st.title("🍻 Tavern Rumor Mill")
         st.info("Generate 3 rumors for your players to overhear: One true, one false, and one dangerously misleading.")
-        
         location = st.text_input("Town, Tavern, or NPC Name:")
         if st.button("Listen at the Bar 🍺") and location:
-            prompt = f"Generate 3 short, punchy D&D rumors overheard in or around '{location}'. 1 must be completely true, 1 must be totally false, and 1 must be a dangerous half-truth. Do not label which is which in the output, just present them as dialogue from patrons."
+            prompt = f"Generate 3 short, punchy D&D rumors overheard in or around '{location}'. 1 must be completely true, 1 must be totally false, and 1 must be a dangerous half-truth. Do not label which is which in the output."
             with st.spinner("Eavesdropping..."):
-                rumors = get_ai_response(prompt, llm_provider, user_api_key)
-                st.markdown(f"<div class='stat-card'>{rumors}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='stat-card'>{get_ai_response(prompt, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    # --- 💰 NEW: DYNAMIC SHOPS ---
-elif page == "💰 Dynamic Shops":
+    elif page == "💰 Dynamic Shops":
         st.title("💰 Dynamic Shops")
-        st.markdown("Generate quirky shopkeepers and instant inventory tables with GP prices.")
         shop_type = st.selectbox("Shop Type", ["Blacksmith", "Alchemist", "General Store", "Magic Item Broker", "Shady Fence"])
-        
         if st.button("Open Shop 🛒"):
             prompt = f"Create a D&D 5e {shop_type}. Provide a brief description of a quirky shopkeeper, and a markdown table containing 5-7 items for sale with their prices in GP."
             with st.spinner("Stocking shelves..."):
-                shop_data = get_ai_response(prompt, llm_provider, user_api_key)
-                st.markdown(f"<div class='stat-card'>{shop_data}</div>", unsafe_allow_html=True)
-
-    # --- 💎 NEW: MAGIC ITEM ARTIFICER ---
-elif page == "💎 Magic Item Artificer":
+                st.markdown(f"<div class='stat-card'>{get_ai_response(prompt, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
+                
+    elif page == "💎 Magic Item Artificer":
         st.title("💎 Magic Item Artificer")
-        st.markdown("Forge legendary artifacts with structured data ready for VTT item sheets.")
-
         col1, col2 = st.columns(2)
-        with col1:
-            item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Wondrous Item", "Ring", "Staff", "Potion"])
-        with col2:
-            rarity = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"])
-        
+        with col1: item_type = st.selectbox("Item Type", ["Weapon", "Armor", "Wondrous Item", "Ring", "Staff", "Potion"])
+        with col2: rarity = st.selectbox("Rarity", ["Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"])
         custom_details = st.text_area("Item Concept", placeholder="e.g., A dagger made of frozen shadow that bleeds cold...")
 
         if st.button("Forge Item 🔨"):
             with st.spinner("Channeling arcane energy..."):
-                prompt = f"Create a D&D 5e {rarity} {item_type}. Concept: {custom_details}. "
-                prompt += """
-                Return ONLY a valid JSON object with these keys: 
-                'name', 'type', 'rarity', 'properties' (list), 'description', 'attunement' (boolean).
-                Do not include markdown backticks or extra text.
-                """
+                prompt = f"Create a D&D 5e {rarity} {item_type}. Concept: {custom_details}. Return ONLY a valid JSON object with these keys: 'name', 'type', 'rarity', 'properties' (list), 'description', 'attunement' (boolean)."
                 raw_json = get_ai_response(prompt, llm_provider, user_api_key)
-                # This uses the 'artificer_json' bank we set up on Line 96
                 st.session_state.artificer_json = raw_json.replace("```json", "").replace("```", "").strip()
 
-        # Display from memory (This keeps it on screen during tab switches!)
         if st.session_state.artificer_json:
             try:
-                import json
-                item_data = json.loads(st.session_state.artificer_json)
-                st.json(item_data)
-                st.download_button(
-                    label="📥 Download Item JSON",
-                    data=st.session_state.artificer_json,
-                    file_name="magic_item.json",
-                    mime="application/json"
-                )
+                st.json(json.loads(st.session_state.artificer_json))
+                st.download_button("📥 Download Item JSON", data=st.session_state.artificer_json, file_name="magic_item.json", mime="application/json")
+                
+                st.divider()
+                st.markdown("### 🔌 Export to Virtual Tabletop")
+                st.markdown("Send this generated magic item directly to your live VTT server via REST API.")
+                
+                col_vtt1, col_vtt2 = st.columns([1, 2])
+                with col_vtt1:
+                    vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_art")
+                with col_vtt2:
+                    webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_art")
+                
+                if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_art"):
+                    if not webhook_url:
+                        st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                    else:
+                        with st.spinner(f"Establishing connection to {vtt_target}..."):
+                            try:
+                                headers = {'Content-Type': 'application/json'}
+                                payload = st.session_state.artificer_json
+                                response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                                if response.status_code in [200, 201]:
+                                    st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                    st.balloons()
+                                else:
+                                    st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                            except requests.exceptions.ConnectionError:
+                                st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                            except Exception as e:
+                                st.error(f"An unexpected error occurred: {e}")
+
             except:
                 st.error("The weave flickered. Try forging again.")
                 st.write("Debug info:", st.session_state.artificer_json)
 
-# --- 🔄 THE GREAT RESTORATION PATCH (Missing Tabs) ---
-elif page == "🎭 NPC Quick Forge":
+    elif page == "🎭 NPC Quick Forge":
         st.title("🎭 NPC Quick Forge")
         npc_type = st.text_input("Profession or Role (e.g., Tavern Keeper, Shady Guard)")
         if st.button("Forge NPC"):
             with st.spinner("Breathing life into NPC..."):
-                prompt = f"Create a D&D 5e NPC who is a {npc_type}. Give them a name, appearance, a distinct quirk, a hidden secret, and a quote."
-                st.markdown(f"<div class='stat-card'>{get_ai_response(prompt, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
-
-elif page == "⚙️ Trap Architect":
+                st.markdown(f"<div class='stat-card'>{get_ai_response(f'Create a D&D 5e NPC who is a {npc_type}. Give them a name, appearance, a distinct quirk, a hidden secret, and a quote.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
+    elif page == "⚙️ Trap Architect":
         st.title("⚙️ Trap Architect")
         danger = st.selectbox("Lethality", ["Nuisance", "Dangerous", "Deadly"])
         if st.button("Build Trap"):
             with st.spinner("Setting trigger..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Create a {danger} D&D 5e trap. Include the trigger, the effect/damage, and how players can spot and disarm it.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-elif page == "📜 Scribe's Handouts":
+    elif page == "📜 Scribe's Handouts":
         st.title("📜 Scribe's Handouts")
         topic = st.text_area("What is the letter, journal, or bounty about?")
         if st.button("Write Handout"):
             with st.spinner("Scribing..."):
-                # Updated for VTT Export functionality
                 handout_text = get_ai_response(f"Write an immersive, in-universe D&D handout about: {topic}", llm_provider, user_api_key)
                 st.markdown(f"<div class='stat-card'>{handout_text}</div>", unsafe_allow_html=True)
-                st.download_button("📥 Download Handout for VTT", handout_text, file_name="handout.txt")
+                st.download_button("📥 Download Handout", handout_text, file_name="handout.txt")
 
-elif page == "🗑️ Pocket Trash Loot":
+                st.divider()
+                st.markdown("### 🔌 Export to Virtual Tabletop")
+                st.markdown("Send this journal handout directly to your live VTT server via REST API.")
+                
+                col_vtt1, col_vtt2 = st.columns([1, 2])
+                with col_vtt1:
+                    vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_scribe")
+                with col_vtt2:
+                    webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_scribe")
+                
+                if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_scribe"):
+                    if not webhook_url:
+                        st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                    else:
+                        with st.spinner(f"Establishing connection to {vtt_target}..."):
+                            try:
+                                headers = {'Content-Type': 'application/json'}
+                                payload = json.dumps({"name": "AI Handout", "content": handout_text})
+                                response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                                if response.status_code in [200, 201]:
+                                    st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                    st.balloons()
+                                else:
+                                    st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                            except requests.exceptions.ConnectionError:
+                                st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                            except Exception as e:
+                                st.error(f"An unexpected error occurred: {e}")
+
+    elif page == "🗑️ Pocket Trash Loot":
         st.title("🗑️ Pocket Trash Loot")
         if st.button("Search the bodies..."):
             with st.spinner("Searching..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response('Generate 5 weird, mundane, or slightly gross trinkets you would find in a goblin or bandit pocket. No magic items.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-elif page == "👑 The Dragon's Hoard":
+    elif page == "👑 The Dragon's Hoard":
         st.title("👑 The Dragon's Hoard")
         hoard_cr = st.selectbox("Target CR Hoard", ["0-4", "5-10", "11-16", "17+"])
         if st.button("Generate Hoard"):
             with st.spinner("Counting gold..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Generate a D&D 5e treasure hoard for CR {hoard_cr}. Include coins, gems, art objects, and 2-3 appropriate magic items.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-elif page == "🌍 Worldbuilder":
+    elif page == "🌍 Worldbuilder":
         st.title("🌍 Worldbuilder Co-Pilot")
         focus = st.selectbox("What are we building?", ["Town/City", "Faction/Guild", "Pantheon/Deity", "Lost Ruin"])
         if st.button("Build World"):
             with st.spinner("Shaping the world..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(f'Create a detailed D&D 5e lore entry for a {focus}. Include history, notable figures, and a current conflict.', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-elif page == "🤖 DM Assistant":
+    elif page == "🤖 DM Assistant":
         st.title("🤖 DM Assistant")
         question = st.text_area("Ask any D&D ruling or prep question:")
         if st.button("Consult Assistant"):
             with st.spinner("Thinking..."):
                 st.markdown(f"<div class='stat-card'>{get_ai_response(question, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-elif page == "🤝 DM Matchmaker":
-        st.title("🤝 DM Matchmaker")
-        st.info("Looking for a group? Drop your details below to connect with other players and DMs.")
-        st.text_input("Discord Handle")
-        st.selectbox("Role", ["Looking for DM", "Looking for Players"])
-        st.text_area("Campaign Style / Timezone")
-        if st.button("Post to Matchmaker Board"):
-            st.success("Board updated! (Simulated for now until we connect the live Matchmaker DB)")
-            st.balloons()
-# --- 🎙️ NEW: AUDIO SCRIBE (WHISPER AI) ---
-elif page == "🎙️ Audio Scribe":
-    st.title("🎙️ Audio Scribe (Whisper AI)")
-    st.markdown("Brainstorming out loud? Speak your campaign ideas, and let the Groq Whisper model instantly transcribe and structure them.")
+    elif page == "🎙️ Audio Scribe":
+        st.title("🎙️ Audio Scribe & Sentiment Analysis")
+        st.markdown("Record your session audio. The AI will transcribe it, organize the notes, or analyze the pacing to help you keep the tension high at the table.")
+        
+        audio_file = st.audio_input("Record your voice notes here:")
+        if audio_file is not None:
+            with st.spinner("Transcribing with Whisper-Large-v3..."):
+                try:
+                    from groq import Groq
+                    api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
+                    if not api_key:
+                        st.error("⚠️ Please enter your Groq API Key in the sidebar.")
+                    else:
+                        client = Groq(api_key=api_key)
+                        transcription = client.audio.transcriptions.create(file=("audio.wav", audio_file.read()), model="whisper-large-v3")
+                        st.success("Transcription complete!")
+                        st.write(transcription.text)
+                        
+                        st.markdown("### 🪄 Magic Formatting & Sentiment Analysis")
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("Turn into Campaign Notes"):
+                                with st.spinner("Structuring notes..."):
+                                    st.markdown(f"<div class='stat-card'>{get_ai_response(f'Take this raw voice transcription and format it into clean, organized D&D campaign notes with bullet points:\\n\\n{transcription.text}', llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
+                        
+                        with col2:
+                            if st.button("Analyze Table Pacing 🎭", type="primary"):
+                                with st.spinner("Analyzing player engagement & tension..."):
+                                    prompt = f"""
+                                    You are an expert D&D Dungeon Master. Analyze this transcript of a live D&D session. 
+                                    Evaluate the pacing, tension, and player engagement. 
+                                    If the players are stuck in analysis paralysis, shopping for too long, or the energy is low, generate a "Tension Spike" (e.g., an ambush, a sudden loud noise, a thief stealing a coin purse) to wake the table up.
+                                    Format the response clearly with:
+                                    1. **Current Pacing Assessment**
+                                    2. **Recommended Tension Spike**
+                                    
+                                    Transcript: {transcription.text}
+                                    """
+                                    st.markdown(f"<div class='stat-card'>{get_ai_response(prompt, llm_provider, user_api_key)}</div>", unsafe_allow_html=True)
 
-    audio_file = st.audio_input("Record your voice notes here:")
+                except Exception as e:
+                    st.error(f"Transcription failed: {e}")
 
-    if audio_file is not None:
-        with st.spinner("Transcribing with Whisper-Large-v3..."):
-            try:
-                from groq import Groq
-                # Grab the API key securely
-                api_key = st.secrets.get("GROQ_API_KEY", user_api_key)
-                if not api_key:
-                    st.error("⚠️ Please enter your Groq API Key in the sidebar.")
-                else:
-                    client = Groq(api_key=api_key)
-                    # Send audio to Groq's lightning-fast Whisper model
-                    transcription = client.audio.transcriptions.create(
-                        file=("audio.wav", audio_file.read()),
-                        model="whisper-large-v3",
-                    )
-
-                    st.success("Transcription complete!")
-                    st.info("Here is what you said:")
-                    st.write(transcription.text)
-
-                    # Bonus: Pass the transcription to the LLM to format it!
-                    st.markdown("### 🪄 Magic Formatting")
-                    if st.button("Turn into Campaign Notes"):
-                        with st.spinner("Structuring notes..."):
-                            prompt = f"Take this raw voice transcription and format it into clean, organized D&D campaign notes with bullet points:\n\n{transcription.text}"
-                            formatted_notes = get_ai_response(prompt, llm_provider, user_api_key)
-                            st.markdown(f"<div class='stat-card'>{formatted_notes}</div>", unsafe_allow_html=True)
-
-            except Exception as e:
-                st.error(f"Transcription failed: {e}")
-
-
-elif page == "⭐ Give Feedback":
+    elif page == "⭐ Give Feedback":
         st.title("⭐ Give Feedback")
         rating = st.slider("How would you rate DM Co-Pilot?", 1, 5, 5)
         st.text_area("Any suggestions or bugs?")
         if st.button("Submit Feedback"):
             st.success(f"Thank you for the {rating}-star rating! Feedback logged to the cloud.")
             
-elif page == "🧬 Homebrew Forge":
+    elif page == "🧬 Homebrew Forge":
         st.title("🧬 Homebrew Monster Forge")
-        st.markdown("Paste your raw monster notes, stats, or chaotic ideas below. The AI will forge it into a perfectly formatted 5e stat block ready for the Community Vault.")
         c1, c2 = st.columns([1, 2])
         homebrew_name = c1.text_input("Monster Name", placeholder="e.g., Laser Squirrel")
         target_cr = c2.selectbox("Target Challenge Rating (CR)", ["Any / Let AI Decide", "0-4 (Low level)", "5-10 (Mid level)", "11-16 (High level)", "17+ (Boss level)"])
-        raw_ideas = st.text_area("Raw Notes & Ideas", height=150, placeholder="e.g., A giant fire-breathing squirrel that shoots lasers from its eyes. Has about 100 HP. Make it deadly but give it a weakness to acorns.")
+        raw_ideas = st.text_area("Raw Notes & Ideas", height=150, placeholder="e.g., A giant fire-breathing squirrel that shoots lasers from its eyes...")
+        
         if st.button("Forge Monster 🔨"):
             if raw_ideas:
                 prompt = f"Create a perfectly balanced D&D 5e monster stat block based on these raw notes: '{raw_ideas}'. "
@@ -725,24 +1188,156 @@ elif page == "🧬 Homebrew Forge":
                 prompt += "Format it cleanly with Markdown. Include Armor Class, Hit Points, Speed, STR, DEX, CON, INT, WIS, CHA, Traits, Actions, and a brief lore description."
                 with st.spinner("Forging stat block..."):
                     forged_monster = get_ai_response(prompt, llm_provider, user_api_key)
-                    st.markdown(f"<div class='stat-card'>{forged_monster}</div>", unsafe_allow_html=True)
-                    st.download_button("📥 Download Stat Block", forged_monster, file_name=f"homebrew_monster.txt")
+                    st.session_state.forged_monster = forged_monster 
             else:
                 st.warning("⚠️ Please provide some raw notes or ideas to forge!")
-    # --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
+                
+        if "forged_monster" in st.session_state:
+            st.markdown(f"<div class='stat-card'>{st.session_state.forged_monster}</div>", unsafe_allow_html=True)
+            st.download_button("📥 Download Stat Block", st.session_state.forged_monster, file_name=f"homebrew_monster.txt")
+
+            st.divider()
+            st.markdown("### 🔌 Export to Virtual Tabletop")
+            st.markdown("Send this Homebrew monster text directly to your live VTT server.")
+            
+            col_vtt1, col_vtt2 = st.columns([1, 2])
+            with col_vtt1:
+                vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_forge")
+            with col_vtt2:
+                webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_forge")
+            
+            if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_forge"):
+                if not webhook_url:
+                    st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                else:
+                    with st.spinner(f"Establishing connection to {vtt_target}..."):
+                        try:
+                            headers = {'Content-Type': 'application/json'}
+                            payload = json.dumps({"name": homebrew_name if homebrew_name else "Homebrew Monster", "content": st.session_state.forged_monster})
+                            response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                            if response.status_code in [200, 201]:
+                                st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                st.balloons()
+                            else:
+                                st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                        except requests.exceptions.ConnectionError:
+                            st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                        except Exception as e:
+                            st.error(f"An unexpected error occurred: {e}")
+
+    elif page == "🔄 2014->2024 Converter":
+        st.title("🔄 2014 to 2024 Statblock Converter")
+        st.markdown("Wizards of the Coast completely overhauled monster design in the 2024 Core Rules. Paste your old 2014 homebrew monsters below, and the AI will instantly rewrite them to perfectly match the new standards.")
+        
+        st.info("💡 **Pro Tip:** The AI is instructed to move Spellcasting into the Actions block, streamline multiattacks, and add Weapon Masteries where appropriate.")
+
+        raw_2014_statblock = st.text_area("Paste 2014 Statblock Here:", height=250, placeholder="Paste the text of your old monster, including its stats, traits, and actions...")
+        
+        if st.button("Update to 2024 Rules 🪄"):
+            if raw_2014_statblock:
+                with st.spinner("Recalibrating mechanics to 2024 standards..."):
+                    prompt = f"""
+                    You are an expert game designer for D&D 5e, specializing in the new 2024 Core Rulebook updates.
+                    Convert the following 2014 monster statblock into the new 2024 formatting standards. 
+                    
+                    CRITICAL 2024 DESIGN RULES YOU MUST FOLLOW:
+                    1. Move 'Spellcasting' from a passive trait entirely into the 'Actions' or 'Bonus Actions' sections. Spells lift should be listed as actual actions they take.
+                    2. Streamline multiattacks and weapon attacks.
+                    3. Add appropriate 'Weapon Masteries' (like Topple, Push, or Sap) if this is a martial creature.
+                    4. Keep the original Challenge Rating (CR) balanced but adjust the formatting to fit the modern, cleaner design philosophy.
+                    
+                    Format the final output beautifully using Markdown.
+                    
+                    Here is the raw 2014 Statblock:
+                    {raw_2014_statblock}
+                    """
+                    
+                    updated_statblock = get_ai_response(prompt, llm_provider, user_api_key)
+                    st.session_state.converter_output = updated_statblock
+            else:
+                st.warning("⚠️ Please paste an old statblock first!")
+                
+        if st.session_state.converter_output:
+            st.markdown(f"<div class='stat-card'>{st.session_state.converter_output}</div>", unsafe_allow_html=True)
+            st.download_button("📥 Download 2024 Statblock", st.session_state.converter_output, file_name="2024_converted_monster.txt")
+
+            st.divider()
+            st.markdown("### 🔌 Export to Virtual Tabletop")
+            st.markdown("Send this updated 2024 statblock directly to your live VTT server.")
+            
+            col_vtt1, col_vtt2 = st.columns([1, 2])
+            with col_vtt1:
+                vtt_target = st.selectbox("Target Engine", ["Foundry VTT", "Roll20 API", "FoxQuest (Beta)"], key="vtt_sel_conv")
+            with col_vtt2:
+                webhook_url = st.text_input("VTT Webhook URL", placeholder="e.g., http://localhost:30000/api/import", key="vtt_url_conv")
+            
+            if st.button(f"Blast to {vtt_target} 🚀", type="primary", key="vtt_btn_conv"):
+                if not webhook_url:
+                    st.warning("⚠️ Please enter your VTT Webhook URL first.")
+                else:
+                    with st.spinner(f"Establishing connection to {vtt_target}..."):
+                        try:
+                            headers = {'Content-Type': 'application/json'}
+                            payload = json.dumps({"name": "Converted 2024 Monster", "content": st.session_state.converter_output})
+                            response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
+                            if response.status_code in [200, 201]:
+                                st.success(f"⚡ Success! Payload delivered directly to {vtt_target}.")
+                                st.balloons()
+                            else:
+                                st.error(f"Target server rejected the payload. Status Code: {response.status_code}")
+                        except requests.exceptions.ConnectionError:
+                            st.error("🔌 Connection Failed. Make sure your VTT server is running and the URL is correct.")
+                        except Exception as e:
+                            st.error(f"An unexpected error occurred: {e}")
+
+# --- 🔐 PASSWORD PROTECTED ADMIN DASHBOARD ---
 st.sidebar.markdown("---")
 if st.sidebar.checkbox("🛠️ Admin Dashboard"):
-        password = st.sidebar.text_input("Enter Dev Password", type="password")
-        if password == "Caleb2026":
+    password = st.sidebar.text_input("Enter Dev Password", type="password")
+    if password == "Caleb2026":
+        st.sidebar.success("Access Granted")
+        st.title("📊 Live Traffic Analytics")
+        
+        if db is not None:
             try:
-                st.sidebar.success("Access Granted")
-                streamlit_analytics.show_results()
+                doc_ref = db.collection("dm_copilot_traffic").document("counts")
+                doc = doc_ref.get()
+                
+                if doc.exists:
+                    data = doc.to_dict()
+                    per_day = data.get("per_day", {})
+                    days = per_day.get("days", [])
+                    pageviews = per_day.get("pageviews", [])
+                    
+                    if days and pageviews:
+                        total_views = sum(pageviews)
+                        today_views = pageviews[-1] if pageviews else 0
+                        
+                        c1, c2, c3 = st.columns(3)
+                        c1.metric(label="Total All-Time Views", value=f"{total_views:,}")
+                        c2.metric(label="Views Today", value=f"{today_views:,}")
+                        c3.metric(label="Days Tracked", value=len(days))
+                        
+                        st.divider()
+                        
+                        st.markdown("### 📈 Daily Pageviews")
+                        
+                        chart_data = pd.DataFrame({
+                            "Date": days,
+                            "Pageviews": pageviews
+                        }).set_index("Date")
+                        
+                        st.bar_chart(chart_data, color="#00FF00")
+                        
+                    else:
+                        st.info("No traffic data found in the arrays yet.")
+                else:
+                    st.warning("The 'counts' document does not exist yet in Firestore.")
+                    
             except Exception as e:
-                st.sidebar.warning("Dashboard error during surge.")
-        elif password:
-            st.sidebar.error("Access Denied")
-
-
-
-
-
+                st.error(f"Error loading custom analytics: {e}")
+        else:
+            st.error("Database is offline. Cannot load analytics.")
+            
+    elif password:
+        st.sidebar.error("Access Denied")
