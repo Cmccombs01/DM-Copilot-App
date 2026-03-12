@@ -47,5 +47,6 @@ The architecture utilizes RAM-caching for large JSON bestiaries and asynchronous
    GROQ_API_KEY = "your_key_here"
    OPENAI_API_KEY = "your_key_here"
    Run the app: streamlit run app.py
-   🤝 Contributing
+
+🤝 Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change. Let's build the digital future of tabletop gaming.
