@@ -475,7 +475,7 @@ with analytics_context:
                             except Exception as e:
                                 st.error(f"Audio generation failed: {e}")
 
-     elif page == "🛡️ Initiative Tracker":
+  elif page == "🛡️ Initiative Tracker":
         st.title("🛡️ Initiative Tracker v2.2")
 
         dnd_conditions = [
@@ -523,7 +523,6 @@ with analytics_context:
             if cols[4].button("🗑️", key=f"del_{idx}"):
                 st.session_state.combatants.pop(idx)
                 st.rerun()
-
     elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (VTT JSON Integration)")
         st.markdown(
@@ -1595,4 +1594,5 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
     elif password:
         st.sidebar.error("Access Denied")
+
 
