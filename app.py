@@ -1573,12 +1573,37 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
                         st.markdown("### 📈 Daily Pageviews")
 
-                        chart_data = pd.DataFrame({
+                    chart_data = pd.DataFrame({
                             "Date": days,
                             "Pageviews": pageviews
                         }).set_index("Date")
 
                         st.bar_chart(chart_data, color="#00FF00")
+
+                        # --- NEW TOOL POPULARITY DASHBOARD ---
+                        st.divider()
+                        st.subheader("📊 Tool Module Popularity")
+                        
+                        tool_modules = data.get("📂 Tool Modules", {})
+                        
+                        if tool_modules:
+                            cols = st.columns(len(tool_modules))
+                            for idx, (module_name, count) in enumerate(tool_modules.items()):
+                                clean_name = module_name.replace("📂 ", "") 
+                                cols[idx].metric(label=clean_name, value=count)
+                                
+                            st.bar_chart(tool_modules)
+                        else:
+                            st.info("No tool clicks recorded yet.")
+                            
+                        st.subheader("🕵️ User Logins")
+                        dm_names = data.get("Your DM Name / Handle", {})
+                        if dm_names:
+                            st.dataframe(
+                                [{"DM Name": k, "Logins": v} for k, v in dm_names.items()], 
+                                use_container_width=True
+                            )
+                        # --- END NEW DASHBOARD ---
 
                     else:
                         st.info("No traffic data found in the arrays yet.")
@@ -1593,5 +1618,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
     elif password:
         st.sidebar.error("Access Denied")
+
 
 
