@@ -1422,8 +1422,7 @@ with analytics_context:
 if st.session_state.forged_monster:
             st.markdown(
                 f"<div class='stat-card'>{st.session_state.forged_monster}</div>", unsafe_allow_html=True)
-            st.download_button(
-                "📥 Download Stat Block", st.session_state.forged_monster, file_name=f"homebrew_monster.txt")
+            st.download_button("📥 Download Stat Block", st.session_state.forged_monster, file_name=f"homebrew_monster.txt")
 
             st.divider()
             st.markdown("### 🔌 Export to Virtual Tabletop")
@@ -1594,4 +1593,5 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
     elif password:
         st.sidebar.error("Access Denied")
+
 
