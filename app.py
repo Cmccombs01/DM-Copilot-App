@@ -475,54 +475,54 @@ with analytics_context:
                             except Exception as e:
                                 st.error(f"Audio generation failed: {e}")
 
-      elif page == "🛡️ Initiative Tracker":
-          st.title("🛡️ Initiative Tracker v2.2")
+     elif page == "🛡️ Initiative Tracker":
+        st.title("🛡️ Initiative Tracker v2.2")
 
-      dnd_conditions = [
-          "Blinded", "Charmed", "Deafened", "Frightened", "Grappled",
-          "Incapacitated", "Invisible", "Paralyzed", "Petrified",
-          "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious", "Exhaustion"
-      ]
+        dnd_conditions = [
+            "Blinded", "Charmed", "Deafened", "Frightened", "Grappled",
+            "Incapacitated", "Invisible", "Paralyzed", "Petrified",
+            "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious", "Exhaustion"
+        ]
 
-      with st.expander("➕ Add Combatant"):
-          c1, c2, c3 = st.columns(3)
-          name = c1.text_input("Name")
-          init = c2.number_input("Roll", value=10)
-          hp = c3.number_input("HP", value=15)
-          if st.button("Add"):
-              st.session_state.combatants.append({
-                  "name": name,
-                  "init": init,
-                  "hp": hp,
-                  "conditions": []
-              })
-              st.session_state.combatants = sorted(
-                  st.session_state.combatants, key=lambda x: x['init'], reverse=True)
-              st.rerun()
+        with st.expander("➕ Add Combatant"):
+            c1, c2, c3 = st.columns(3)
+            name = c1.text_input("Name")
+            init = c2.number_input("Roll", value=10)
+            hp = c3.number_input("HP", value=15)
+            if st.button("Add"):
+                st.session_state.combatants.append({
+                    "name": name,
+                    "init": init,
+                    "hp": hp,
+                    "conditions": []
+                })
+                st.session_state.combatants = sorted(
+                    st.session_state.combatants, key=lambda x: x['init'], reverse=True)
+                st.rerun()
 
-      for idx, c in enumerate(st.session_state.combatants):
-          if "conditions" not in c:
-              c["conditions"] = []
+        for idx, c in enumerate(st.session_state.combatants):
+            if "conditions" not in c:
+                c["conditions"] = []
 
-          cols = st.columns([2, 1, 1, 3, 1])
-          cols[0].write(f"**{c['name']}**")
-          cols[1].write(f"⚔️ {c['init']}")
-          cols[2].write(f"❤️ {c['hp']}")
+            cols = st.columns([2, 1, 1, 3, 1])
+            cols[0].write(f"**{c['name']}**")
+            cols[1].write(f"⚔️ {c['init']}")
+            cols[2].write(f"❤️ {c['hp']}")
 
-          new_conditions = cols[3].multiselect(
-              "Conditions",
-              options=dnd_conditions,
-              default=c["conditions"],
-              key=f"cond_{idx}",
-              label_visibility="collapsed"
-          )
+            new_conditions = cols[3].multiselect(
+                "Conditions",
+                options=dnd_conditions,
+                default=c["conditions"],
+                key=f"cond_{idx}",
+                label_visibility="collapsed"
+            )
 
-          if new_conditions != c["conditions"]:
-              st.session_state.combatants[idx]["conditions"] = new_conditions
+            if new_conditions != c["conditions"]:
+                st.session_state.combatants[idx]["conditions"] = new_conditions
 
-          if cols[4].button("🗑️", key=f"del_{idx}"):
-              st.session_state.combatants.pop(idx)
-              st.rerun()
+            if cols[4].button("🗑️", key=f"del_{idx}"):
+                st.session_state.combatants.pop(idx)
+                st.rerun()
 
     elif page == "🐉 Monster Bestiary":
         st.title("🐉 Monster Bestiary (VTT JSON Integration)")
@@ -1595,3 +1595,4 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
     elif password:
         st.sidebar.error("Access Denied")
+
