@@ -1573,7 +1573,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
                         st.markdown("### 📈 Daily Pageviews")
 
-                    chart_data = pd.DataFrame({
+                   chart_data = pd.DataFrame({
                             "Date": days,
                             "Pageviews": pageviews
                         }).set_index("Date")
@@ -1584,7 +1584,9 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                         st.divider()
                         st.subheader("📊 Tool Module Popularity")
                         
-                        tool_modules = data.get("📂 Tool Modules", {})
+                        # THE FIX: Pointing the code into the 'widgets' folder
+                        widgets_data = data.get("widgets", {})
+                        tool_modules = widgets_data.get("📂 Tool Modules", {})
                         
                         if tool_modules:
                             cols = st.columns(len(tool_modules))
@@ -1597,7 +1599,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
                             st.info("No tool clicks recorded yet.")
                             
                         st.subheader("🕵️ User Logins")
-                        dm_names = data.get("Your DM Name / Handle", {})
+                        dm_names = widgets_data.get("Your DM Name / Handle", {})
                         if dm_names:
                             st.dataframe(
                                 [{"DM Name": k, "Logins": v} for k, v in dm_names.items()], 
@@ -1607,17 +1609,7 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
                     else:
                         st.info("No traffic data found in the arrays yet.")
-                else:
-                    st.warning(
-                        "The 'counts' document does not exist yet in Firestore.")
 
-            except Exception as e:
-                st.error(f"Error loading custom analytics: {e}")
-        else:
-            st.error("Database is offline. Cannot load analytics.")
-
-    elif password:
-        st.sidebar.error("Access Denied")
 
 
 
