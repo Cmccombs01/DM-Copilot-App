@@ -1419,7 +1419,7 @@ with analytics_context:
                 st.warning(
                     "⚠️ Please provide some raw notes or ideas to forge!")
 
-        if st.session_state.forged_monster:
+         if st.session_state.forged_monster:
             st.markdown(
                 f"<div class='stat-card'>{st.session_state.forged_monster}</div>", unsafe_allow_html=True)
             st.download_button(
@@ -1594,5 +1594,6 @@ if st.sidebar.checkbox("🛠️ Admin Dashboard"):
 
     elif password:
         st.sidebar.error("Access Denied")
+
 
 
