@@ -1,22 +1,18 @@
-# 🐉 DM Co-Pilot: Masterwork Edition
-**The #1 Ranked AI Toolkit for 5e Dungeon Masters**
+# 🐉 DM Co-Pilot: The Agentic Edition (v4.0)
+[![Viberank Rank](https://img.shields.io/badge/Viberank-Rank_%233-00FF00)](https://viberank.dev/?category=AI&page=2)
 
-DM Co-Pilot is a production-grade AI ecosystem designed to eliminate prep-work and streamline live TTRPG sessions. Built with a **Twin-Engine Architecture**, it leverages a FastAPI backend and Redis semantic caching to deliver near-zero latency for over 2,700+ users.
+**DM Co-Pilot** is a production-grade AI ecosystem for D&D 5e, moving beyond simple prompts into **Multi-Agent Orchestration**.
 
-## 🏛️ New: The Welcome Hub
-The latest update introduces the **Welcome Hub**, a centralized dashboard that categorizes tools into three tactical destinies:
-- **⚔️ RUN COMBAT:** Real-time Initiative tracking, Player Cheat Sheets, and Action Economy math.
-- **📜 FORGE LORE:** PDF-based RAG (Retrieval-Augmented Generation), NPC Forging, and the Butterfly Effect Engine.
-- **🏛️ BROWSE VAULT:** A cloud-synced community database for sharing homebrew creations.
+## ⚖️ Featured: The Real-Time Rules Lawyer (v4.0)
+Unlike standard LLMs that hallucinate mechanics, v4.0 implements a **Researcher/Auditor loop**:
+- **Agent A (Researcher):** Extracts raw 5e SRD facts via a semantic router.
+- **Agent B (Auditor):** Verifies the facts against the live table dispute for a 100% authoritative ruling.
 
-## ⚡ Technical Stack
-- **Frontend:** Streamlit (Optimized for low-latency session state management)
-- **Intelligence:** Groq (Llama 3.1 8b/70b) & OpenAI (DALL-E 3, TTS-1, Vision)
-- **Caching:** Redis "The Oracle" Engine (Semantic prompt hashing via MD5)
-- **Database:** Google Firebase/Firestore (Real-time community vault & analytics)
-- **Performance:** Tenacity-backed retries & Pydantic data validation
+## 🛠️ Tech Stack & Architecture
+- **Backend:** [FastAPI](https://dashboard.render.com/web/srv-d6r606450q8c73bspg8g/events) deployed on Render.
+- **Intelligence:** Groq-powered Llama 3.1 (8B/70B) for sub-second reasoning.
+- **Memory:** [Upstash Redis](https://dm-copilot-cloud.onrender.com/) for global prompt caching (The Oracle Engine).
+- **Telemetry:** [Google Cloud Firestore](https://console.cloud.google.com/firestore/databases/-default-/data/panel/dm_copilot_traffic/counts?project=dm-copilot-analytics) for live traffic and community data.
 
-## 🚀 Recent Milestones
-- **#1 Weekly AI App** on [Viberank](https://viberank.dev/?category=AI)
-- **2,700+** Unique Pageviews
-- **4,300+** AI Generations handled with 99.9% Uptime
+---
+*Currently #3 Monthly on [Viberank](https://viberank.dev/?category=AI&page=2) with 4,372+ successful runs.*
