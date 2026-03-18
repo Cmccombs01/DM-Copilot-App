@@ -1,18 +1,42 @@
-# 🐉 DM Co-Pilot: Masterwork Edition (v5.0)
+# 🐉 DM-Copilot-Cloud (v5.0 Masterwork Edition)
 
-*Current Status:* STABLE & LIVE | *Rank:* 🏆 #1 AI App on Viberank (March 2026)
+**The Ultimate AI-Powered Toolkit for Dungeon Masters.**
+DM-Copilot-Cloud is an enterprise-grade Streamlit web application designed to eliminate prep time and elevate live tabletop roleplaying games. By combining Retrieval-Augmented Generation (RAG) with strict formatting constraints, it acts as a trustworthy campaign historian, a tactical encounter builder, and an automatic VTT asset forge.
 
-DM Co-Pilot is a production-grade, twin-engine AI toolkit designed to automate Dungeons & Dragons 5e session prep, provide real-time rulings, and generate sub-second voice-to-voice NPC interactions at the table.
+---
 
-## 🚀 The v5.0 Masterwork Upgrades
+## ✨ Core Features
 
-* 👻 **Ghost NPC (Voice-to-Voice Engine):** A low-latency conversational agent. Users speak directly into their microphone, and the AI responds out loud, in character, using OpenAI's cinematic Onyx voice. 
-* 🔐 **Zero-Config BYOK Architecture:** Implemented a secure "Bring Your Own Key" environment for Groq logic routing, paired with an OS-level Render Vault handshake to provide users with a 5-turn premium voice trial.
-* 🗺️ **Predictive World Heatmaps (GraphRAG):** A deterministic data visualization tool that maps the "butterfly effects" of chaotic player actions into interactive faction knowledge graphs.
-* 🎲 **The Fate-Threader (v4.1):** A client-side Monte Carlo combat simulator. Runs 1,000 parallel encounter timelines in milliseconds to calculate precise TPK probabilities with zero backend latency.
+### 🧠 The Campaign Brain (Zero-Hallucination RAG)
+Upload your campaign notes, world lore, and PDFs directly into the app.
+* **Powered by FAISS:** Uses high-speed local vector databases to instantly retrieve relevant lore.
+* **Strict Citations:** The AI is strictly prompt-engineered to prevent hallucinations. It acts as a historian, providing exact citations (e.g., `[Source: Page 12]`) based *only* on the documents provided.
 
-## 🏗️ Architecture & Tech Stack
-Built to handle high-traffic weekend gaming bursts without rate-limit freezing.
-* **Frontend (Client):** *Streamlit* — Handles UI, Session State, and local deterministic math (like the Fate-Threader) to bypass CORS overhead.
-* **Backend (API):** *FastAPI* hosted on *Render* — Manages secure Vault handshakes and REST endpoints.
-* **Agentic Brain:** *Groq* (Llama 3.1) + *OpenAI* (Whisper Large V3 & TTS-1).
+### 🐉 Tactical Bestiary & Auto-Forge
+Generate completely custom 5e monsters formatted as structured JSON data for direct import into Foundry VTT and Roll20.
+* **Veteran Combat Tactics:** Automatically generates brutal, round-by-round combat strategies (Openings, Reactions, Desperation moves) injected directly into the monster's JSON stat block.
+* **Token Auto-Forge:** With a single click, the app reads the newly generated JSON data and uses **DALL-E 3** to automatically forge a custom, top-down VTT token perfectly matching the creature's description.
+
+### 📊 Omniscient Admin Dashboard (Telemetry)
+A password-protected developer portal to monitor live application usage.
+* **Firestore Sync:** Reads live database traffic directly from Firebase.
+* **Data Visualization:** Uses `Seaborn` and `Matplotlib` to render beautiful, clean charts showing exactly which tools and features DMs are utilizing the most in real-time.
+
+---
+
+## 🛠️ Tech Stack & Architecture
+
+* **Frontend:** [Streamlit](https://streamlit.io/) (Python)
+* **AI & LLMs:** OpenAI API (GPT-4o, DALL-E 3)
+* **Vector Database:** `FAISS` (Facebook AI Similarity Search) & `NumPy`
+* **Backend Database:** Firebase / Firestore (NoSQL)
+* **Data Science:** `Pandas`, `Seaborn`, `Matplotlib`
+
+---
+
+## 🚀 Local Installation & Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/YourUsername/DM-Copilot-Cloud.git](https://github.com/YourUsername/DM-Copilot-Cloud.git)
+   cd DM-Copilot-Cloud
