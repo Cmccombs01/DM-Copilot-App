@@ -1,0 +1,21 @@
+{
+  "id": "dm-copilot-bridge",
+  "title": "DM Co-Pilot | Native VTT Bridge",
+  "description": "The official REST API listener for DM Co-Pilot. Instantly catch and render AI-generated monsters, items, and journals from the cloud app.",
+  "version": "1.0.0",
+  "library": false,
+  "manifestPlusVersion": "1.2.0",
+  "compatibility": {
+    "minimum": "11",
+    "verified": "12"
+  },
+  "authors": [
+    {
+      "name": "Caleb McCombs",
+      "url": "https://dm-copilot-cloud.onrender.com"
+    }
+  ],
+  "scripts": [
+    "main.js"
+  ]
+}
