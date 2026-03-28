@@ -1,19 +1,21 @@
-# 🐉 DM Co-Pilot | Community Edition AI Instructions
+# 🐉 DM Co-Pilot | Open-Source AI TTRPG Toolkit
+**The community standard for Dungeons & Dragons 5e AI assistance.**
 
-Hello, AI Assistant. Goal: Maintain the 'DM Co-Pilot' as a stable, open-source TTRPG toolkit. 
-Focus: Community Accessibility, Clean Code, and Standard 5e Compatibility.
+[![Viberank Rank](https://img.shields.io/badge/Viberank-%231_Rated-00FF00)](https://viberank.dev/?category=AI)
+[![Status](https://img.shields.io/badge/Status-Live_v8.6-blue)](https://dm-copilot-cloud.onrender.com/)
 
-## 🚨 PUBLIC SAFETY PROTOCOL
-1. **Surgical Strikes:** Keep updates under 50 lines. Maintain the logic that allows users to 'Bring Your Own Key' (BYOK) for Groq and OpenAI.
-2. **Indentation Shield:** Use strict 4-space indentation.
-3. **No Internal Leaks:** NEVER mention Blaze Tier, specific private billing accounts, or internal telemetry IDs in this repository.
+DM Co-Pilot is a free, open-source workstation for Dungeon Masters. It provides real-time AI tools for encounter design, rules checking, and VTT integration.
 
-## 🎯 CURRENT OBJECTIVE: THE COMMUNITY STABILITY STRIKE
-- *Status:* ✅ v8.6 STABLE.
-- *Focus:* Ensure the VTT Bridge and Monster Lab remain compatible with standard Foundry VTT/Roll20 community modules.
-- *Infrastructure:* Standard 60s heartbeats and public Firestore schemas only.
+## ✨ Core Features
+- **🐉 Monster Lab:** Live Markdown editor for custom statblocks.
+- **🔌 VTT Bridge:** One-click JSON exports for Foundry VTT and Roll20.
+- **⚖️ Rules Lawyer:** Instant 5e rules arbitration using local memory.
+- **🎲 Fate-Threader:** Combat probability simulator.
 
-## 🏗️ THE COMMUNITY ROADMAP
-1. **BYOK Bridge** (DONE): Users can input their own API keys via the sidebar.
-2. **Markdown Statblocks** (DONE): Human-readable editing in the Monster Lab.
-3. **Multi-System Interop** (PLANNED): Expanding JSON schemas for systems beyond 5e.
+## 🚀 Getting Started
+1. **Clone the Repo:** `git clone https://github.com/Cmccombs01/DM-Copilot-App.git`
+2. **Install Dependencies:** `pip install -r requirements.txt`
+3. **Run Locally:** `streamlit run app.py`
+4. **API Keys:** Bring your own Groq or OpenAI keys and enter them in the sidebar to begin.
+
+[Launch the Live Community Version](https://dm-copilot-cloud.onrender.com/)
