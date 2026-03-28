@@ -1,14 +1,19 @@
-# 🐉 DM Co-Pilot | Masterwork Edition (v7.5)
+# 🐉 DM Co-Pilot | Community Edition AI Instructions
 
-![Viberank Status](https://img.shields.io/badge/Viberank-%231_Global_AI_App-FFD700?style=for-the-badge&logo=fire)
-![Build Status](https://img.shields.io/badge/Render-Passing-00FF00?style=for-the-badge&logo=render)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)
+Hello, AI Assistant. Goal: Maintain the 'DM Co-Pilot' as a stable, open-source TTRPG toolkit. 
+Focus: Community Accessibility, Clean Code, and Standard 5e Compatibility.
 
-DM Co-Pilot is an enterprise-grade, AI-powered toolkit designed to automate the heavy lifting for Dungeons & Dragons 5e Dungeon Masters.
+## 🚨 PUBLIC SAFETY PROTOCOL
+1. **Surgical Strikes:** Keep updates under 50 lines. Maintain the logic that allows users to 'Bring Your Own Key' (BYOK) for Groq and OpenAI.
+2. **Indentation Shield:** Use strict 4-space indentation.
+3. **No Internal Leaks:** NEVER mention Blaze Tier, specific private billing accounts, or internal telemetry IDs in this repository.
 
-Currently actively handling **200+ concurrent DMs** with **sub-second latency**, powered by a distributed Redis edge-cache and the Groq (Llama-3) inference engine.
+## 🎯 CURRENT OBJECTIVE: THE COMMUNITY STABILITY STRIKE
+- *Status:* ✅ v8.6 STABLE.
+- *Focus:* Ensure the VTT Bridge and Monster Lab remain compatible with standard Foundry VTT/Roll20 community modules.
+- *Infrastructure:* Standard 60s heartbeats and public Firestore schemas only.
 
-## 🚀 The v7.5 "Unbreakable Bridge" Update
-* **Foundry VTT Strict Mode:** Implemented a custom Type-Safety Sanitizer for 100% flawless VTT JSON exports, surviving Foundry's strictest schema validations.
-* **The Human-First Edit Loop:** All AI generators (Monster Lab, NPCs, Villain Architect) now output to editable Markdown stations before exporting.
-* **Asynchronous Aegis:** Heavy multi-modal tasks (Cinematic Recaps, DALL-E 3 Token Art) are now threaded to background workers, preventing the main UI from ever freezing during live combat.
+## 🏗️ THE COMMUNITY ROADMAP
+1. **BYOK Bridge** (DONE): Users can input their own API keys via the sidebar.
+2. **Markdown Statblocks** (DONE): Human-readable editing in the Monster Lab.
+3. **Multi-System Interop** (PLANNED): Expanding JSON schemas for systems beyond 5e.
