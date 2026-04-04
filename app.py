@@ -5059,7 +5059,7 @@ elif page == "🛠️ Admin Dashboard":
     st.title("📊 Enterprise Analytics Dashboard")
     admin_pwd = st.text_input("Enter Admin Password", type="password")
 
-    if admin_pwd == "caleb2026":
+    if admin_pwd == "":
         if db is not None:
             st.success("✅ Secure Uplink Established. Welcome, Architect.")
 
