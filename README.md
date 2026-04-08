@@ -1,42 +1,29 @@
-# 🐉 DM Co-Pilot | Community Edition
+# 🐉 GM Co-Pilot™ | Masterwork Edition
+### Home of The Amnesty Protocol
 
-**The open-source workstation for Dungeons & Dragons 5e.**
+[![Read The Amnesty Protocol Blueprint](https://img.shields.io/badge/Read_The_Blueprint-The_Amnesty_Protocol-00FF00?style=for-the-badge)](https://github.com/Cmccombs01/GM-Copilot-App/blob/main/THE_AMNESTY_PROTOCOL.md)
 
-[![Viberank Rank](https://img.shields.io/badge/Viberank-%231_Rated-00FF00)](https://viberank.dev/?category=AI)
-[![Status](https://img.shields.io/badge/Status-Live_v8.6-blue)](https://dm-copilot-cloud.onrender.com/)
+The TTRPG industry has a massive problem: **The 20-hour onboarding barrier.** Legacy platforms are building walled gardens that require reading manuals, doing math, and navigating complex UIs just to start playing. 
 
-DM Co-Pilot is a community-driven AI toolkit designed to eliminate session prep friction. It provides modular tools for monster generation, VTT integration, and real-time rules assistance.
+**GM Co-Pilot™ is the bridge.** We have engineered an edge-cached, deterministic AI Operating System that reduces the barrier to entry from hours to **30 seconds**. A user scans a QR code, rolls a virtual d20, survives a 2-minute interactive crisis, and leaves with a fully compliant, 2024 RAW character payload that can be injected into *any* Virtual Tabletop (Roll20, Foundry VTT, D&D Beyond).
 
-## ✨ Core Community Features
+We aren't a walled garden. We are the universal start screen.
 
-* **🐉 Monster Lab:** Live split-pane Markdown editor to draft custom creatures with real-time stat block rendering.
-* **🔌 VTT Bridge:** Schema-ready JSON exports and live API webhooks for Foundry VTT and Roll20.
-* **🛡️ Initiative Tracker:** Local-first combat manager with SQLite session recovery and 0.01s WebSocket player syncing.
-* **🎲 Random Generators:** Deterministic SRD loot hoard rolling, NPC forging, and Tavern Rumors.
+---
 
-## 🏗️ Cloud Architecture (v8.6 Microservice)
+## 🚀 The Architecture (0.82s Latency Engine)
+*(Currently holding #1 on the global VibeRank AI Leaderboard).*
 
-To handle 450+ concurrent users and hold the #1 spot on Viberank, the production application utilizes a decoupled, dual-server microservice architecture:
+* **The Edge:** Implemented a globally distributed Redis cache as a request coalescer and semantic normalizer, shielding the Firestore NoSQL database and delivering a strict **0.82s p99 latency** during peak AI generation.
+* **The Intelligence:** Powered by a deterministic RAG pipeline running Llama-3.3 (via Groq), strictly anchored to the 2024 Core Rules.
+* **The Bridge:** Dynamically generates strictly typed JSON schemas via REST API webhooks, supported by a "Trojan Horse" iframe embed state for native platform integration across the TTRPG ecosystem.
+* **The Spatial Frontier:** Headless Python backend architecture pre-configured to drive WebXR/A-Frame VR environments asynchronously.
+* **The Living World:** Qdrant Vector Cloud integration for persistent, global community lore and asynchronous "Phantom GM" background events.
 
-1. **Frontend UI (Streamlit):** Handles the lightweight visual interface and real-time player WebSocket syncing.
-2. **The Oracle Engine (FastAPI):** A dedicated headless backend that processes heavy LLM logic, rules arbitration, and Qdrant vector database math.
-3. **Redis Edge-Cache:** A distributed cache pool that intercepts redundant API calls, slashing mean latency to ~0.75s and preventing LLM rate limits.
-4. **The Failover Matrix:** Automated LLM routing that silently falls back from Groq to OpenAI if rate limits are hit, ensuring 100% uptime.
+---
 
-## 🛠️ Security & API Configuration (BYOK)
+## 🛠️ Access the Live Engine
+The platform is currently operating in a headless cloud environment. 
+👉 **[Launch the Live Masterwork Build](https://dm-copilot-cloud.onrender.com)**
 
-To keep this project free and accessible, users provide their own API keys:
-
-1. **Groq API:** High-speed logic and 5e rules assistance.
-2. **OpenAI API:** Advanced Vision (Dice/Map OCR) and Multi-modal fallback.
-*Input your keys in the sidebar of the application to begin.*
-
-## 🚀 Quick Start (Local Monolith)
-
-*Note: The local development build runs as a monolith for ease of use.*
-
-1. **Clone the Repo:** `git clone https://github.com/Cmccombs01/DM-Copilot-App.git`
-2. **Install:** `pip install -r requirements.txt`
-3. **Run:** `streamlit run app.py`
-
-[Launch the Live Community Build](https://dm-copilot-cloud.onrender.com/)
+📫 *Integration Inquiries, Data Analytics & Enterprise Contact:* [Connect on LinkedIn](https://www.linkedin.com/in/caleb-mccombs-443b2326b/) | calebmccombs49@gmail.com
