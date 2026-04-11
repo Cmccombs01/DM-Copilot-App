@@ -1,38 +1,52 @@
-# 🐉 GM Co-Pilot™ | Masterwork Edition
-### Home of The Amnesty Protocol
+# 🐉 GM Co-Pilot™ | The Universal TTRPG Bridge
 
-[![Read The Amnesty Protocol Blueprint](https://img.shields.io/badge/Read_The_Blueprint-The_Amnesty_Protocol-00FF00?style=for-the-badge)](https://github.com/Cmccombs01/GM-Copilot-App/blob/main/THE_AMNESTY_PROTOCOL.md)
+**Status:** 🚀 Operation Marketplace (Target: May 30, 2026)  
+**Performance:** ⚡ 0.82s p99 Latency (Redis Edge-Cache)  
+**Ecosystem:** 🛡️ 171+ Active Entities Tracked in the Nexus  
 
-The TTRPG industry has a massive problem: **The 20-hour onboarding barrier.** Legacy platforms are building walled gardens that require reading manuals, doing math, and navigating complex UIs just to start playing. 
-
-**GM Co-Pilot™ is the bridge.** We have engineered an edge-cached, deterministic AI Operating System that reduces the barrier to entry from hours to **30 seconds**. A user scans a dynamic QR code, rolls a virtual d20, survives a 2-minute interactive crisis, and leaves with a fully compliant, 2024 RAW character payload that can be injected into *any* Virtual Tabletop (Roll20, Foundry VTT, D&D Beyond).
-
-We aren't a walled garden. We are the universal start screen.
+[![Read The Amnesty Protocol](https://img.shields.io/badge/BLUEPRINT-THE_AMNESTY_PROTOCOL-00FF00?style=for-the-badge)](https://github.com/Cmccombs01/GM-Copilot-Cloud/blob/main/THE_AMNESTY_PROTOCOL.md)
+[![Experience the Pulse](https://img.shields.io/badge/LIVE_APP-ENTER_THE_NEXUS-blue?style=for-the-badge)](https://dm-copilot-cloud.onrender.com/)
 
 ---
 
-## 🚀 The Architecture (0.82s Latency Engine)
-*(Currently holding #1 on the global VibeRank AI Leaderboard).*
+## 🏛️ The Amnesty Protocol: Phase 6 Secured
+The TTRPG industry is built on legacy lag and manual labor. We are architecting the bridge. **GM Co-Pilot™** is a deterministic, edge-cached AI Operating System that collapses the 20-hour onboarding barrier into a **30-second interactive surge.**
 
-* **The Edge:** Implemented a globally distributed Redis cache as a request coalescer and semantic normalizer, shielding the Firestore NoSQL database and delivering a strict **0.82s p99 latency** during peak AI generation.
-* **The Intelligence:** Powered by a deterministic RAG pipeline running Llama-3.3 (via Groq), strictly anchored to the 2024 Core Rules.
-* **The Vector Cloud:** Hard-coded Qdrant vector memory integration ensures zero-hallucination lore retrieval and rules moderation.
-* **The Seed of Fate:** A fully autonomous "Living World" cron-engine that sweeps live Discord webhooks and player micro-actions to dynamically shift the macro-narrative state of the world in real-time.
-* **The Trojan Horse:** Dynamically generates strictly typed JSON schemas via REST API webhooks, supported by an iframe embed state for native platform integration across the TTRPG ecosystem.
-
----
-
-## 🔌 The Oracle Infrastructure (API-as-a-Service)
-GM Co-Pilot™ is now decoupled from the UI, operating as a standalone, high-speed FastAPI microservice. We expose our flawless 2024 RAW memory and sub-second execution speed to external developers.
-
-* **Developer API Portal:** A self-serve dashboard where external devs can generate cryptographic `gmc_` API keys tied directly to a Stripe usage-based metering system.
-* **The Gatekeeper:** Every API request passes through a seamless Google Firestore authentication check, keeping our compute burn rate at absolute zero while opening a B2B revenue stream.
-* **MCP B2B Integration:** Universal Model Context Protocol (`MCP_REGISTRY`) endpoints allow external Discord bots, VTTs, and indie apps to bypass their own LLM training and query our "Rules God" directly.
+### ⚔️ The Phase 6 Triple Strike:
+1.  **The Multiverse Pulse:** A live, high-velocity telemetry ticker broadcasting every character forge and campaign listing in real-time.
+2.  **The Hall of Heroes:** A persistent, global chronicle recording the legacy of the **171+ entities** currently active in the Nexus.
+3.  **The Chronicle of Fate:** Asynchronous global event logging that ensures the world breathes even when players are offline.
 
 ---
 
-## 🛠️ Access the Live Engine
-The platform is currently operating in a headless cloud environment. 
-👉 **[Launch the Live Masterwork Build](https://dm-copilot-cloud.onrender.com)**
+## 🚀 The Challenge: "Try to Break the Multiverse"
+We have officially transitioned to **S-Corp status** and hardened the infrastructure. Now, we need the community to find the friction.
 
-📫 *Integration Inquiries, Data Analytics & Enterprise Contact:* [Connect on LinkedIn](https://www.linkedin.com/in/caleb-mccombs-443b2326b/) | calebmccombs49@gmail.com
+- **Dungeon Masters:** Use the [Matchmaker Engine](https://dm-copilot-cloud.onrender.com/) to link with high-intent players.
+- **Players:** Run the [Seed of Fate](https://dm-copilot-cloud.onrender.com/) and forge a 2024 RAW character in under 30 seconds.
+- **Developers:** Audit the [0.82s p99 Latency Engine](https://github.com/Cmccombs01/GM-Copilot-App/blob/main/app.py).
+
+**Challenge Issued:** If you can crash the edge-cache or out-pace the deterministic RAG pipeline, [open an issue](https://github.com/Cmccombs01/GM-Copilot-App/issues).
+
+---
+
+## 🛠️ The Tech Stack (v26.3)
+* **The Brain:** Llama-3.3 via Groq (Deterministic RAG)
+* **The Shield:** Globally distributed Redis Edge-Cache (Request Coalescing)
+* **The Vault:** Firestore NoSQL + Qdrant Vector Archive
+* **The Bridge:** REST API Webhooks & Trojan Horse Iframe State Management
+* **The Spatial Frontier:** Headless Python backend for WebXR/A-Frame VR
+
+---
+
+## 📂 Repository Architecture Note
+*This repository is currently transitioning to a modular architecture. Core logic is being moved to the `/core` directory to support S-Corp horizontal scaling and sub-second latency targets.*
+
+---
+
+## 📫 Connections & Intelligence
+* **Architecture & News:** [Connect on LinkedIn](https://www.linkedin.com/in/caleb-mccombs-850335237/)
+* **Direct Inquiry:** [calebmccombs49@gmail.com](mailto:calebmccombs49@gmail.com)
+* **Live Metrics:** [GM Co-Pilot Executive Dashboard](https://dm-copilot-cloud.onrender.com/)
+
+*"We aren't looking to get hired. We are building the infrastructure the giants will be forced to run on by 2027."*
