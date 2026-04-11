@@ -21,6 +21,17 @@ Unlike stateless AI tools, GM Co-Pilot™ maintains a living record of the multi
 ### 4. The Intelligence Vault (Deterministic Telemetry)
 We have moved beyond simple monitoring to active behavioral analytics. The [Intelligence Vault](https://console.cloud.google.com/firestore/databases/-default-/data/panel/llm_telemetry) tracks `cache_hit` ratios, `latency_seconds`, and Relative Party Strength (RPS) in real-time. This dataset allows for institutional-grade scaling and proactive load balancing across the S-Corp infrastructure.
 
+5. The Universal Translator (Pillar 19)
+To achieve a 30-second onboarding time, the system utilizes a proprietary Lexical Mapping Engine (LME). This deterministic bridge resolves the "Schema Drift" between legacy D&D data (2014/Homebrew) and the 2024 RAW standard.
+
+Automated Schema Alignment (ASA): Identifies and re-indexes legacy data points (e.g., Species-to-Race mapping, Action-to-Magic Action conversion) without manual input.
+
+Zero-Friction Ingestion: Collapses the "Translation Tax" for veteran players, allowing for the instantaneous migration of 171+ complex entities into the active Nexus.
+
+The Common Tongue Layer: An abstraction layer that simplifies high-level mechanical jargon into natural language, facilitating zero-friction entry for new players while maintaining underlying 2024 RAW integrity.
+
+
+
 ---
 
 ## Technical Specifications:
