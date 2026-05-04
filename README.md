@@ -44,6 +44,27 @@ We have officially transitioned to **S-Corp status** and hardened the infrastruc
 
 ---
 
+## 🛡️ Ethical AI & Privacy Guardrails
+
+GM Co-Pilot Studios operates under a **Privacy by Design** framework. The platform architecture prioritizes data sovereignty and algorithmic transparency to ensure high-stakes reliability across both gaming and enterprise sectors.
+
+### Data Sovereignty (Zero-Storage Policy)
+The GM Co-Pilot infrastructure is stateless. **Personal Identifiable Information (PII) is not stored.** Logic is processed in real-time; once a tactical alert or output is generated, raw behavioral data is purged from active memory.
+
+### Edge-First Processing
+To mitigate data breach risks, the Sensing Engine is architected for local processing. By executing logic on the "edge," sensitive movement and routine data remain on the local network rather than a centralized corporate server.
+
+### Deterministic Accuracy vs. Probabilistic Bias
+Generic AI models often rely on broad social patterns, which can introduce algorithmic bias. GM Co-Pilot utilizes **Deterministic Logic**, triggering only based on the specific mathematical baseline of a unique individual or environment. This eliminates the "hallucination" risks associated with standard probabilistic models.
+
+### Informed Consent
+The system remains a **Human-in-the-Loop** tool. Users and legal guardians maintain absolute control over sensing activity and data reporting.
+
+
+---
+
+
+
 ## 📫 Connections & Intelligence
 * **Architecture & News:** [Connect on LinkedIn](https://www.linkedin.com/in/caleb-mccombs-850335237/)
 * **Direct Inquiry:** [calebmccombs49@gmail.com](mailto:calebmccombs49@gmail.com)
